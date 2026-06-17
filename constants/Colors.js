@@ -100,4 +100,4 @@ export const Colors = {
     },
 };
 
-export let selectedThemeString = 'oceanTheme';
+export let selectedThemeString = 'darkTheme';
