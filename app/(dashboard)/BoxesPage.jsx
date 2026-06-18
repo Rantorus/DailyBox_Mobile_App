@@ -1,10 +1,12 @@
 import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState,useMemo } from 'react';
 import { Colors, selectedThemeString } from '../../constants/Colors';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
 import ThemedInput from '../../components/ThemedInput';
+
+import { useSearch } from '../../hooks/useSearch';
 
 import { useRouter } from 'expo-router'
 
@@ -18,16 +20,53 @@ const BoxesPage = () => {
 
   const theme = Colors[selectedThemeString]
   const router = useRouter()
-  const [query, setQuery] = useState();
   const [shownCategory, setShownCategory] = useState(true);
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [sortBy, setSortBy] = useState("new");
+  const [tempSortBy, setTempSortBy] = useState('new');
 
-  const filteredData = dummyBoxes.filter((data) => {
-    return shownCategory
-      ? data.category.toLowerCase() === 'log'
-      : data.category.toLowerCase() === 'plan';
-  })
+  // 3. İLK VERİ HAZIRLIĞI (Sonsuz döngüyü çözen useMemo yapısı)
+  const filteredData = useMemo(() => {
+    return dummyBoxes
+      .filter((data) => {
+        return shownCategory
+          ? data.category.toLowerCase() === 'log'
+          : data.category.toLowerCase() === 'plan';
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "new": return new Date(b.date) - new Date(a.date);
+          case "old": return new Date(a.date) - new Date(b.date);
+          case "az": return a.title.localeCompare(b.title);
+          case "za": return b.title.localeCompare(a.title);
+          default: return 0;
+        }
+      });
+  }, [shownCategory, sortBy]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+
+  // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
+  const { query, setQuery, results, loading } = useSearch(filteredData);
+
+  // 5. ÖNİZLEME SAYACI (Filtre Paneli İçin)
+  const previewCount = dummyBoxes.filter((item) => {
+    // 1. Temel Filtre: Log mu Plan mı?
+    const categoryMatch = shownCategory 
+      ? item.category.toLowerCase() === 'log' 
+      : item.category.toLowerCase() === 'plan';
+    
+    // 2. Arama Filtresi: Arama çubuğundaki yazıyı HEM BAŞLIKTA HEM AÇIKLAMADA ara!
+    const searchMatch = query 
+      ? item.title.toLowerCase().includes(query.toLowerCase()) || 
+        item.description.toLowerCase().includes(query.toLowerCase())
+      : true;
+
+    // (İleride buraya Seçilen Kategoriler ve Favoriler gibi filtreleri de ekleyeceğiz)
+
+    return categoryMatch && searchMatch; 
+  }).length;
+
+  
 
   return (
 
@@ -42,16 +81,19 @@ const BoxesPage = () => {
             onChangeText={setQuery}
           />
 
-          <TouchableOpacity 
-              style={styles.filterIcon} 
-              onPress={() => setIsFilterVisible(true)}
-            >
-              <Ionicons name="filter-circle" size={28} color={theme.textLight} />
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterIcon}
+            onPress={() => {
+              setTempSortBy(sortBy);
+              setIsFilterVisible(true)
+            } }
+          >
+            <Ionicons name="filter-circle" size={28} color={theme.textLight} />
+          </TouchableOpacity>
 
         </View>
 
-        <Spacer height={20}/>
+        <Spacer height={20} />
 
         <ThemedCard style={styles.topBar}>
           {/* LOGS BUTONU */}
@@ -78,7 +120,7 @@ const BoxesPage = () => {
         <Spacer height={10} />
 
         <FlatList
-          data={filteredData}
+          data={results}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -173,23 +215,77 @@ const BoxesPage = () => {
         {/* ALTTAN ÇIKAN FİLTRE PANELİ */}
         {isFilterVisible && (
           <ThemedView style={styles.bottomSheet}>
-            
-            {/* Panelin Üst Kısmı (Başlık ve Çarpı Butonu) */}
-            <View style={styles.sheetHeader}>
-              <ThemedText title={true} style={{ fontSize: 20 }}>Filter Boxes</ThemedText>
-              
-              <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
-                <Ionicons name="close-circle" size={30} color={theme.textLight} />
+
+            <View style={{ flex: 1 }}>
+
+              {/* Panelin Üst Kısmı (Başlık ve Çarpı Butonu) */}
+              <View style={styles.sheetHeader}>
+                <ThemedText title={true} style={{ fontSize: 20 }}>Filter Boxes</ThemedText>
+
+                <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
+                  <Ionicons name="close-circle" size={30} color={theme.textLight} />
+                </TouchableOpacity>
+              </View>
+
+
+
+              {/* AYIRICI ÇİZGİ */}
+              <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
+
+              <ThemedText title={shownCategory === true}>SORT BY</ThemedText>
+              <Spacer height={10} />
+
+              {/* İÇERİK KISMI (Buraya sonradan butonlar/seçenekler ekleyeceğiz) */}
+              <ThemedCard style={styles.sortBar}>
+                {/* Newest BUTONU */}
+                <TouchableOpacity onPress={() => setTempSortBy("new")}>
+                  <ThemedText title={tempSortBy == "new"}>Newest</ThemedText>
+                </TouchableOpacity>
+
+                <View style={[styles.verticalDivider, { backgroundColor: theme.textLight + '80' }]} />
+
+                {/* Oldest BUTONU */}
+                <TouchableOpacity onPress={() => setTempSortBy("old")}>
+                  <ThemedText title={tempSortBy == "old"}>Oldest</ThemedText>
+                </TouchableOpacity>
+
+                <View style={[styles.verticalDivider, { backgroundColor: theme.textLight + '80' }]} />
+
+                {/* A-Z BUTONU */}
+                <TouchableOpacity onPress={() => setTempSortBy("az")}>
+                  <ThemedText title={tempSortBy == "az"}>A-Z</ThemedText>
+                </TouchableOpacity>
+
+                <View style={[styles.verticalDivider, { backgroundColor: theme.textLight + '80' }]} />
+
+                {/* Z-A BUTONU */}
+                <TouchableOpacity onPress={() => setTempSortBy("za")}>
+                  <ThemedText title={tempSortBy == "za"}>Z-A</ThemedText>
+                </TouchableOpacity>
+
+              </ThemedCard>
+            </View>
+
+            {/* Bottom Action Row */}
+            <View style={styles.filterActionRow}>
+              <TouchableOpacity onPress={() => {
+                setIsFilterVisible(false)
+                setSortBy(tempSortBy)
+              }} 
+              style={[styles.filterButton, { backgroundColor: theme.primary }]}>
+                <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>SHOW RESULTS ({previewCount})</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setTempSortBy('new');
+                }}
+              >
+                <ThemedText style={{ color: theme.text }}>Clear</ThemedText>
               </TouchableOpacity>
             </View>
 
-            {/* AYIRICI ÇİZGİ */}
-            <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
-
-            {/* İÇERİK KISMI (Buraya sonradan butonlar/seçenekler ekleyeceğiz) */}
-            <ThemedText style={{ color: 'gray' }}>
-              Buraya Favoriler, Türler (Work, Travel vb.) ve Sıralama seçenekleri gelecek...
-            </ThemedText>
 
           </ThemedView>
         )}
@@ -206,15 +302,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchWrapper: {
-        width: "80%",
-        marginBottom: 20,
-        alignSelf: "center",
-        marginTop: 30,
-        justifyContent: "center",
-    },
+    width: "80%",
+    marginBottom: 20,
+    alignSelf: "center",
+    marginTop: 30,
+    justifyContent: "center",
+  },
   searchBar: {
     paddingLeft: 20,
-    paddingRight:50,
+    paddingRight: 50,
     borderRadius: 25,
 
   },
@@ -226,7 +322,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 15,
     gap: 20,
-    borderRadius:15,
+    borderRadius: 15,
     alignSelf: "center"
   },
   // Yeni eklenen sarmalayıcı (Tüm genişliği kaplar ve içeriği sola yaslar)
@@ -294,6 +390,10 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 15,
   },
+  verticalDivider: {
+    width: StyleSheet.hairlineWidth, // Yatayda 1 piksel genişlik (dikey çizgi için)
+    height: 18,                     // Yazıların yüksekliğiyle uyumlu olsun
+  },
   // YENİ KARARTMA EFEKTİ (Blur yerine)
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -313,7 +413,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 40,
     padding: 25,
     zIndex: 1000, // Karartmanın (998) ve + butonunun (999) üstünde durması için
-    
+
     // Alttan çıkan panele derinlik (gölge) katmak için
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 }, // Gölgeyi yukarı doğru verir
@@ -326,5 +426,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
+  },
+  sortBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: "center",
+    width: 300,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    gap: 20,
+    borderRadius: 15,
+    alignSelf: "center"
+  },
+  filterActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 15,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: 'gray',
+    marginTop: 10,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  clearButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 25,
   },
 })
