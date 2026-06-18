@@ -6,7 +6,6 @@ import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
-// DİKKAT: BlurView importunu sildik!
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
 import { CalendarList } from 'react-native-calendars';
