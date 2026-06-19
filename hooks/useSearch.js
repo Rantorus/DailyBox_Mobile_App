@@ -22,7 +22,7 @@ export const useSearch = (filteredData) => {
                     item.description.toLowerCase().includes(query.toLowerCase())
                 );
 
-                setResults(searchedData); // 4. formatMovies kaldırıldı!
+                setResults(searchedData); 
             } catch (err) {
                 console.error('Search Error:', err);
             } finally {

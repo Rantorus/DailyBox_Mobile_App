@@ -23,16 +23,52 @@ const BoxesPage = () => {
   const [shownCategory, setShownCategory] = useState(true);
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+
   const [sortBy, setSortBy] = useState("new");
   const [tempSortBy, setTempSortBy] = useState('new');
+
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [tempShowFavoritesOnly, setTempShowFavoritesOnly] = useState(false);
+
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [tempSelectedTypes, setTempSelectedTypes] = useState([]);
+
+  // DİNAMİK TİP LİSTESİ ÇIKARMA
+  // dummyBoxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
+  const availableTypes = useMemo(() => {
+    const allTypes = dummyBoxes.map(box => box.type);
+    return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş olanları temizler
+  }, []);
+
+  // ÇOKLU SEÇİM İÇİN YARDIMCI FONKSİYON (Kum havuzu için)
+  const toggleTempType = (type) => {
+    if (tempSelectedTypes.includes(type)) {
+      // Eğer zaten seçiliyse, listeden çıkar
+      setTempSelectedTypes(tempSelectedTypes.filter(t => t !== type));
+    } else {
+      // Seçili değilse, listeye ekle
+      setTempSelectedTypes([...tempSelectedTypes, type]);
+    }
+  };
 
   // 3. İLK VERİ HAZIRLIĞI (Sonsuz döngüyü çözen useMemo yapısı)
   const filteredData = useMemo(() => {
     return dummyBoxes
       .filter((data) => {
-        return shownCategory
+        const categoryMatch = shownCategory
           ? data.category.toLowerCase() === 'log'
           : data.category.toLowerCase() === 'plan';
+          
+        // GERÇEK FAVORİ FİLTRESİ
+        const favoriteMatch = showFavoritesOnly 
+          ? data.isFavorite === true 
+          : true;
+
+          const typeMatch = selectedTypes.length > 0 
+          ? selectedTypes.includes(data.type) 
+          : true;
+
+        return categoryMatch && favoriteMatch && typeMatch;
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -43,7 +79,7 @@ const BoxesPage = () => {
           default: return 0;
         }
       });
-  }, [shownCategory, sortBy]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+  }, [shownCategory, sortBy,showFavoritesOnly,selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
 
   // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
   const { query, setQuery, results, loading } = useSearch(filteredData);
@@ -61,9 +97,18 @@ const BoxesPage = () => {
         item.description.toLowerCase().includes(query.toLowerCase())
       : true;
 
+      // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)
+    const favoriteMatch = tempShowFavoritesOnly 
+      ? item.isFavorite === true 
+      : true;
+
+      const typeMatch = tempSelectedTypes.length > 0 
+      ? tempSelectedTypes.includes(item.type) 
+      : true;
+
     // (İleride buraya Seçilen Kategoriler ve Favoriler gibi filtreleri de ekleyeceğiz)
 
-    return categoryMatch && searchMatch; 
+    return categoryMatch && searchMatch && favoriteMatch && typeMatch; 
   }).length;
 
   
@@ -85,7 +130,9 @@ const BoxesPage = () => {
             style={styles.filterIcon}
             onPress={() => {
               setTempSortBy(sortBy);
-              setIsFilterVisible(true)
+              setIsFilterVisible(true);
+              setTempShowFavoritesOnly(showFavoritesOnly);
+              setTempSelectedTypes(selectedTypes);
             } }
           >
             <Ionicons name="filter-circle" size={28} color={theme.textLight} />
@@ -232,7 +279,7 @@ const BoxesPage = () => {
               {/* AYIRICI ÇİZGİ */}
               <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
 
-              <ThemedText title={shownCategory === true}>SORT BY</ThemedText>
+              <ThemedText title={true}>SORT BY</ThemedText>
               <Spacer height={10} />
 
               {/* İÇERİK KISMI (Buraya sonradan butonlar/seçenekler ekleyeceğiz) */}
@@ -266,11 +313,54 @@ const BoxesPage = () => {
               </ThemedCard>
             </View>
 
+            {/* --- TYPES CHECKBOX BÖLÜMÜ --- */}
+              <Spacer height={25} />
+              <ThemedText title={true}>TYPES</ThemedText>
+              <Spacer height={10} />
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingLeft: 5 }}>
+                {availableTypes.map((type, index) => (
+                  <TouchableOpacity 
+                    key={index}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '45%' }} // width 45% ile yan yana iki kolon yapar
+                    onPress={() => toggleTempType(type)}
+                  >
+                    <Ionicons 
+                      name={tempSelectedTypes.includes(type) ? "checkbox" : "square-outline"} 
+                      size={24} 
+                      color={theme.primary} 
+                    />
+                    <ThemedText title={true} style={{ fontSize: 16 }}>{type}</ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+            {/* --- FAVORİLER CHECKBOX BÖLÜMÜ --- */}
+              <Spacer height={25} />
+              <ThemedText title={true}>STATUS</ThemedText>
+              <Spacer height={10} />
+              
+              <TouchableOpacity 
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 5 }} 
+                onPress={() => setTempShowFavoritesOnly(!tempShowFavoritesOnly)}
+              >
+                <Ionicons 
+                  name={tempShowFavoritesOnly ? "checkbox" : "square-outline"} 
+                  size={24} 
+                  color={theme.primary} 
+                />
+                <ThemedText title={true} style={{ fontSize: 16 }}>Favorites Only</ThemedText>
+              </TouchableOpacity>
+
+
+
             {/* Bottom Action Row */}
             <View style={styles.filterActionRow}>
               <TouchableOpacity onPress={() => {
                 setIsFilterVisible(false)
-                setSortBy(tempSortBy)
+                setSortBy(tempSortBy);
+                setShowFavoritesOnly(tempShowFavoritesOnly);
+                setSelectedTypes(tempSelectedTypes);
               }} 
               style={[styles.filterButton, { backgroundColor: theme.primary }]}>
                 <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>SHOW RESULTS ({previewCount})</ThemedText>
@@ -280,6 +370,8 @@ const BoxesPage = () => {
                 style={styles.clearButton}
                 onPress={() => {
                   setTempSortBy('new');
+                  setTempShowFavoritesOnly(false);
+                  setTempSelectedTypes([]);
                 }}
               >
                 <ThemedText style={{ color: theme.text }}>Clear</ThemedText>
@@ -408,7 +500,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    height: 350, // Şimdilik sabit bir yükseklik, içerik arttıkça "auto" yapabilirsin
+    height: "auto", // Şimdilik sabit bir yükseklik, içerik arttıkça "auto" yapabilirsin
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     padding: 25,
