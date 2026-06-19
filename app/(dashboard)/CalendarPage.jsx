@@ -1,6 +1,7 @@
 import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity } from 'react-native';
 import React, { useState } from 'react';
-import { Colors, selectedThemeString } from '../../constants/Colors';
+import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
@@ -9,6 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
 import { CalendarList } from 'react-native-calendars';
+import { useRouter } from 'expo-router';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -22,7 +24,10 @@ const CalendarPage = () => {
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
 
-  const theme = Colors[selectedThemeString];
+  const router = useRouter();
+
+  const { themeName } = useTheme();
+  const theme = Colors[themeName];
 
   const filteredData = dummyBoxes.filter((item) => {
     return item.date.split('T')[0] === selectedDate;
@@ -129,7 +134,7 @@ const CalendarPage = () => {
           renderMonthPicker()
         ) : (
           <CalendarList
-            key={calKey}
+            key={`${calKey}-${themeName}`}
             current={calendarCurrent}
             onDayPress={(day) => setSelectedDate(day.dateString)}
             renderHeader={(date) => {
@@ -183,7 +188,7 @@ const CalendarPage = () => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <Pressable onPress={() => console.log(`Basildi: ${item.id}`)}>
+          <Pressable onPress={() => router.push(`box/${item.id}`)}>
             <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
               <ThemedText style={styles.title}>{item.title}</ThemedText>
               <ThemedText>{item.date.split('T')[0]}</ThemedText>

@@ -6,13 +6,16 @@ import ThemedInput from '../components/ThemedInput'
 import ThemedBtn from '../components/ThemedBtn.jsx'
 import Spacer from '../components/Spacer.jsx'
 
-import { Colors, selectedThemeString } from '../constants/Colors'
+import { Colors } from '../constants/Colors'
+import { useTheme } from '../contexts/ThemeContext.jsx'
 import { useRouter } from 'expo-router'
 import { dummyUsers } from '../fetchUser/userInfo.js'
 
 const index = () => {
     const router = useRouter();
-    const theme = Colors[selectedThemeString];
+
+    const { themeName } = useTheme();
+    const theme = Colors[themeName];
 
     const [email, setEmail] = useState(dummyUsers[0].email)
     const [password, setPassword] = useState(dummyUsers[0].password)

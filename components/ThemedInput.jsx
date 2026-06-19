@@ -1,9 +1,11 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native'
 import React, { useState } from 'react'
-import { Colors,selectedThemeString } from '../constants/Colors'
+import { Colors } from '../constants/Colors'
+import { useTheme } from '../contexts/ThemeContext'
 
 const ThemedInput = ({ style, ...props }) => {
-    const theme = Colors[selectedThemeString];
+    const { themeName } = useTheme();
+    const theme = Colors[themeName];
     const [isFocused, setIsFocused] = useState(false)
     return (
         <TextInput
@@ -15,7 +17,7 @@ const ThemedInput = ({ style, ...props }) => {
                     color: theme.text,
                     padding: 20,
                     borderRadius: 15,
-                    borderWidth: isFocused ? 2 : 1, 
+                    borderWidth: isFocused ? 2 : 1,
                     borderColor: isFocused ? theme.primary : theme.border,
                 },
                 style

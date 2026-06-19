@@ -1,0 +1,230 @@
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { useLocalSearchParams, Stack } from 'expo-router';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Colors } from '../../constants/Colors';
+import { StatusBar } from 'expo-status-bar';
+import ThemedView from '../../components/ThemedView';
+import ThemedText from '../../components/ThemedText';
+import Spacer from '../../components/Spacer';
+import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
+import ThemedCard from '../../components/ThemedCard';
+
+const BoxDetail = () => {
+    const { id } = useLocalSearchParams();
+    const { themeName } = useTheme();
+    const theme = Colors[themeName];
+
+
+    const boxData = dummyBoxes.find((data) => {
+        return data.id == id
+
+    })
+
+    return (
+        <ThemedView safe={true} style={styles.container}>
+            <StatusBar style={theme.statusBarStyle} />
+
+            <Stack.Screen
+                options={{
+                    headerRight: () => (
+                        <TouchableOpacity
+                            onPress={() => {
+                                console.log("Edit butonuna basıldı");
+                            }}
+                            style={[styles.editButton, {
+                                backgroundColor: theme.primary + '20',
+                            }]}
+                            activeOpacity={1}
+                        >
+                            <Ionicons
+                                name={"pencil-sharp"}
+                                size={18} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
+                                color={theme.primary}
+                            />
+                            <ThemedText style={{
+                                color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
+                                fontWeight: "bold",
+                                fontSize: 15
+                            }}>
+                                Edit
+                            </ThemedText>
+                        </TouchableOpacity>
+                    )
+                }}
+            />
+
+            <ThemedCard style={{borderRadius:10,padding:20}}>
+                <ThemedText style={{ fontSize: 18, alignSelf: "center" }} title={true}>{boxData.title}</ThemedText>
+                <Spacer height={25} />
+                <View style={styles.typeDateBar}>
+                    <ThemedText>Type: {boxData.type}</ThemedText>
+                    <ThemedText>Date: {boxData.date.split('T')[0]}</ThemedText>
+                    <ThemedText>Category: {boxData.category}</ThemedText>
+                </View>
+                <Spacer height={25} />
+                <ThemedText style={styles.descriptionText}>Description: {boxData.description}</ThemedText>
+            </ThemedCard>
+
+
+            {/* --- FAVORİLER CHECKBOX BÖLÜMÜ --- */}
+            {boxData.category == "plan" && (
+                <>
+                    <Spacer height={25} />
+                    <View
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 5 }}
+                    >
+                        <Ionicons
+                            name={"checkbox"}
+                            size={24}
+                            color={theme.primary}
+                        />
+
+                        <ThemedText style={{ fontSize: 16, textDecorationLine: 'line-through' }}>Completed</ThemedText>
+                    </View>
+                </>
+            )}
+
+            <Spacer />
+            <ThemedText style={{paddingHorizontal:10}} title={true}>Features</ThemedText>
+            {boxData.hasNote && (
+                <>
+                    <Spacer height={20} />
+                    <ThemedCard style={styles.noteCard}>
+                        <Ionicons name="document-text" size={24} color={theme.primary} />
+
+                        <View
+                            style={{
+                                width: 1.5,           // Çizginin kalınlığı
+                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
+                                backgroundColor: theme.text,
+                                opacity: 0.3,
+                                alignSelf: "center"       // Göz yormaması için saydamlık
+                            }}
+                        />
+
+
+                        <ThemedText style={{ alignSelf: "center" }} title={true}>Notes</ThemedText>
+                    </ThemedCard>
+                </>
+            )}
+
+            {boxData.hasTodos && (
+                <>
+                    <Spacer height={10} />
+                    <ThemedCard style={styles.noteCard}>
+                        <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
+
+                        <View
+                            style={{
+                                width: 1.5,           // Çizginin kalınlığı
+                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
+                                backgroundColor: theme.text,
+                                opacity: 0.3,
+                                alignSelf: "center"       // Göz yormaması için saydamlık
+                            }}
+                        />
+
+
+                        <ThemedText style={{ alignSelf: "center" }} title={true}>Todos</ThemedText>
+                        <ThemedText style={{ alignSelf: "center" }} title={true}>({boxData.todos.length} tasks)</ThemedText>
+
+                    </ThemedCard>
+                </>
+            )}
+
+            {boxData.hasLocation && (
+                <>
+                    <Spacer height={10} />
+                    <ThemedCard style={styles.noteCard}>
+                        <Ionicons name="location" size={24} color={theme.primary} />
+
+                        <View
+                            style={{
+                                width: 1.5,           // Çizginin kalınlığı
+                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
+                                backgroundColor: theme.text,
+                                opacity: 0.3,
+                                alignSelf: "center"       // Göz yormaması için saydamlık
+                            }}
+                        />
+
+
+                        <ThemedText style={{ alignSelf: "center" }} title={true}>Location</ThemedText>
+
+                    </ThemedCard>
+                </>
+            )}
+
+            {boxData.hasMedia && (
+                <>
+                    <Spacer height={10} />
+                    <ThemedCard style={styles.noteCard}>
+                        <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
+
+                        <View
+                            style={{
+                                width: 1.5,           // Çizginin kalınlığı
+                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
+                                backgroundColor: theme.text,
+                                opacity: 0.3,
+                                alignSelf: "center"       // Göz yormaması için saydamlık
+                            }}
+                        />
+
+
+                        <ThemedText style={{ alignSelf: "center" }} title={true}>Media</ThemedText>
+
+                    </ThemedCard>
+                </>
+            )}
+
+
+
+        </ThemedView>
+    );
+};
+
+export default BoxDetail;
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: 15,
+    },
+    typeDateBar: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    descriptionText: {
+        // paddingHorizontal:18,
+
+    },
+    verticalDivider: {
+        width: StyleSheet.hairlineWidth, // Yatayda 1 piksel genişlik (dikey çizgi için)
+        height: 18,                     // Yazıların yüksekliğiyle uyumlu olsun
+    },
+    noteCard: {
+        flexDirection: "row",
+        gap: 20,
+        width: "70%",
+        height: "auto",
+        alignSelf: "center",
+        borderRadius: 15,
+        marginTop: 15,
+
+    },
+    editButton: {
+        marginRight: 15,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6, // İkon ve yazı arasındaki boşluk
+        paddingHorizontal: 12, // Sağdan soldan iç boşluk
+        paddingVertical: 6, // Üstten alttan iç boşluk
+        borderRadius: 20, // Tam oval (hap) görünümü için
+    }
+});

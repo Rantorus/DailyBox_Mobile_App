@@ -1,3 +1,4 @@
+
 export const Colors = {
     // 1. LIGHT THEME 
     lightTheme: {
@@ -99,5 +100,3 @@ export const Colors = {
         statusBarStyle: "dark",      
     },
 };
-
-export let selectedThemeString = 'darkTheme';

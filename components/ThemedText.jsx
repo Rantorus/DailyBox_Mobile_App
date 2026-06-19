@@ -1,9 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-import { Colors,selectedThemeString } from '../constants/Colors'
+import { Colors } from '../constants/Colors'
+import { useTheme } from '../contexts/ThemeContext'
 
 const ThemedText = ({ style, title = false, ...props }) => {
-    const theme = Colors[selectedThemeString];
+
+    const { themeName } = useTheme();
+    const theme = Colors[themeName];
 
     const textColor = title ? theme.text : theme.textLight
 

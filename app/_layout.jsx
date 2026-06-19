@@ -1,12 +1,16 @@
-import { StyleSheet, Text, useColorScheme, View } from 'react-native'
+import { StyleSheet } from 'react-native'
 import React from 'react'
-import { Slot, Stack } from 'expo-router'
+import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
-import { Colors,selectedThemeString } from '../constants/Colors'
+import { Colors } from '../constants/Colors'
 
-const RootLayout = () => {
+// Hem Provider'ı hem de hook'u import ediyoruz
+import { ThemeProvider, useTheme } from "../contexts/ThemeContext"
 
-    const theme = Colors[selectedThemeString]
+// 1. İÇ BİLEŞEN (TÜKETİCİ): Provider'ın İÇİNDE kaldığı için temayı güvenle okuyabilir.
+const InnerLayout = () => {
+    const { themeName } = useTheme(); 
+    const theme = Colors[themeName];  
 
     return (
         <>
@@ -17,9 +21,25 @@ const RootLayout = () => {
             }}>
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
                 <Stack.Screen name="index" options={{ title: "Daily Box" }} />
+                <Stack.Screen 
+                  name="box/[id]" 
+                  options={{ 
+                    title: "Box Details", // Yukarıdaki başlık
+                    headerBackTitle: "Back", // iOS için geri butonu yazısı
+                    headerStyle: { backgroundColor: theme.headerBackground },
+                  }} 
+                />
             </Stack>
         </>
+    )
+}
 
+// 2. DIŞ BİLEŞEN (SAĞLAYICI): Tek görevi İç Bileşeni sarmalamaktır. İçinde useTheme ÇAĞRILAMAZ!
+const RootLayout = () => {
+    return (
+        <ThemeProvider>
+            <InnerLayout />
+        </ThemeProvider>
     )
 }
 

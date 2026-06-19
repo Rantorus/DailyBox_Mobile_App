@@ -1,12 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-import { Colors,selectedThemeString } from '../constants/Colors'
+import { Colors } from '../constants/Colors'
+import { useTheme } from '../contexts/ThemeContext'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const ThemedView = ({style, safe=false, ...props}) => {
-    const theme = Colors[selectedThemeString];
+    const { themeName } = useTheme();
+    const theme = Colors[themeName];
     
-
     if(!safe){
         return (
     <View 

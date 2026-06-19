@@ -1,6 +1,7 @@
 import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import React, { useState,useMemo } from 'react';
-import { Colors, selectedThemeString } from '../../constants/Colors';
+import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
@@ -18,7 +19,8 @@ import Spacer from '../../components/Spacer';
 
 const BoxesPage = () => {
 
-  const theme = Colors[selectedThemeString]
+  const { themeName } = useTheme();
+  const theme = Colors[themeName]
   const router = useRouter()
   const [shownCategory, setShownCategory] = useState(true);
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
@@ -129,6 +131,7 @@ const BoxesPage = () => {
           <TouchableOpacity
             style={styles.filterIcon}
             onPress={() => {
+              Keyboard.dismiss();
               setTempSortBy(sortBy);
               setIsFilterVisible(true);
               setTempShowFavoritesOnly(showFavoritesOnly);
@@ -172,7 +175,7 @@ const BoxesPage = () => {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <Pressable onPress={() => console.log(`Basildi: ${item.id}`)}>
+            <Pressable onPress={() => router.push(`box/${item.id}`)}>
               <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

@@ -3,13 +3,15 @@ import { useColorScheme } from "react-native"
 import { StatusBar } from 'expo-status-bar'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Colors,selectedThemeString } from "../../constants/Colors";
+import { Colors } from "../../constants/Colors";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const ICON_SIZE = 24;
 
 const DashboardLayout = () => {
 
-    const theme = Colors[selectedThemeString]
+    const { themeName } = useTheme();
+    const theme = Colors[themeName]
 
     return (
         
