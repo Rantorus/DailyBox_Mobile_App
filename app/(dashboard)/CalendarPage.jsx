@@ -203,7 +203,7 @@ const CalendarPage = () => {
         }
       />
 
-      
+
       {isCreateCardVisible && (
         <Pressable
           style={styles.overlay}
@@ -220,8 +220,15 @@ const CalendarPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('Create Log Tıklandı')
+
                 setIsCreateCardVisible(false);
+                router.push({
+                  pathname: "/box/CreateBoxPage",
+                  params: {
+                    category: "log",
+                    date: selectedDate
+                  }
+                });
               }}
             >
               <Ionicons name="document-text" size={20} color={theme.primary} />
@@ -241,6 +248,13 @@ const CalendarPage = () => {
               onPress={() => {
                 console.log('Create Plan Tıklandı')
                 setIsCreateCardVisible(false);
+                router.push({
+                  pathname: "/box/CreateBoxPage",
+                  params: {
+                    category: "plan",
+                    date: selectedDate
+                  }
+                });
               }}
             >
               <Ionicons name="calendar" size={20} color={theme.primary} />
@@ -286,9 +300,9 @@ const styles = StyleSheet.create({
   },
   createPlus: {
     position: 'absolute',
-    bottom: 25, 
-    right: 25,  
-    zIndex: 999, 
+    bottom: 25,
+    right: 25,
+    zIndex: 999,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -310,11 +324,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   menuItem: {
-    flexDirection: 'row',     
-    alignItems: 'center',     
-    paddingVertical: 12,      
-    paddingHorizontal: 15,    
-    gap: 12,                  
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    gap: 12,
   },
   menuText: {
     fontSize: 18,
@@ -322,12 +336,12 @@ const styles = StyleSheet.create({
   },
   menuDivider: {
     height: StyleSheet.hairlineWidth,
-    marginHorizontal: 15,     
+    marginHorizontal: 15,
   },
   // YENİ KARARTMA EFEKTİ (Blur yerine)
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.4)', // %40 saydam siyah
-    zIndex: 998, 
+    zIndex: 998,
   },
 });

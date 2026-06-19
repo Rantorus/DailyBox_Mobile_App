@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TextInput, View } from 'react-native'
+import { Keyboard, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native'
 import React, { useState } from 'react'
 import { Colors } from '../constants/Colors'
 import { useTheme } from '../contexts/ThemeContext'
@@ -7,7 +7,7 @@ const ThemedInput = ({ style, ...props }) => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const [isFocused, setIsFocused] = useState(false)
-    return (
+    return ( 
         <TextInput
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -24,6 +24,7 @@ const ThemedInput = ({ style, ...props }) => {
             ]}
             {...props}
         />
+        
     )
 }
 

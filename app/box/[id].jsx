@@ -91,6 +91,15 @@ const BoxDetail = () => {
 
             <Spacer />
             <ThemedText style={{paddingHorizontal:10}} title={true}>Features</ThemedText>
+
+
+            <View 
+                style={[
+                    styles.featuresDivider, 
+                    { backgroundColor: theme.text } // Rengi temadan alıyoruz
+                ]} 
+            />
+
             {boxData.hasNote && (
                 <>
                     <Spacer height={20} />
@@ -207,6 +216,15 @@ const styles = StyleSheet.create({
     verticalDivider: {
         width: StyleSheet.hairlineWidth, // Yatayda 1 piksel genişlik (dikey çizgi için)
         height: 18,                     // Yazıların yüksekliğiyle uyumlu olsun
+    },
+    featuresDivider: {
+        height: 2,               // Keskin ip gibi durmaması için çok hafif kalınlık
+        width: "95%",            // Ekranın sonuna kadar uzanmasını engeller
+        alignSelf: "center",     // Tam ortaya hizalar (sağdan soldan eşit boşluk kalır)
+        opacity: 0.2,            // Rengi silikleştirip arka plana yumuşakça yedirir
+        borderRadius: 5,         // Çizginin uçlarını yuvarlatır (keskin köşeleri yok eder)
+        marginBottom: 15,
+        marginTop: 10,        // Altındaki kartlarla arasına nefes alma boşluğu bırakır
     },
     noteCard: {
         flexDirection: "row",

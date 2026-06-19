@@ -29,6 +29,14 @@ const InnerLayout = () => {
                     headerStyle: { backgroundColor: theme.headerBackground },
                   }} 
                 />
+                <Stack.Screen 
+                  name="box/CreateBoxPage" 
+                  options={{ 
+                    title: "Create Box", // Yukarıdaki başlık
+                    headerBackTitle: "Back", // iOS için geri butonu yazısı
+                    headerStyle: { backgroundColor: theme.headerBackground },
+                  }} 
+                />
             </Stack>
         </>
     )
