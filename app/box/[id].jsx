@@ -1,6 +1,6 @@
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import React from 'react';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +19,8 @@ const BoxDetail = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
+    const router = useRouter();
+
 
     const boxData = dummyBoxes.find((data) => {
         return data.id == id
@@ -36,7 +38,12 @@ const BoxDetail = () => {
                         <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                                console.log("Save butonuna basıldı");
+                                router.push({
+                                    pathname: "/box/EditBoxPage",
+                                    params: {
+                                        boxDataId : boxData.id
+                                    }
+                                });
                             }}
                             style={[styles.editButton, {
                                 backgroundColor: theme.primary + '20',
