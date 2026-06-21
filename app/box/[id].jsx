@@ -29,21 +29,22 @@ const BoxDetail = () => {
         <ThemedView safe={true} style={styles.container}>
             <StatusBar style={theme.statusBarStyle} />
 
+            {/* Ekranın üstündeki Box detail ve edit yazısı*/}
             <Stack.Screen
                 options={{
                     headerRight: () => (
                         <TouchableOpacity
+                            activeOpacity={0.7}
                             onPress={() => {
-                                console.log("Edit butonuna basıldı");
+                                console.log("Save butonuna basıldı");
                             }}
                             style={[styles.editButton, {
                                 backgroundColor: theme.primary + '20',
                             }]}
-                            activeOpacity={1}
                         >
                             <Ionicons
                                 name={"pencil-sharp"}
-                                size={18} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
+                                size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
                                 color={theme.primary}
                             />
                             <ThemedText style={{
@@ -58,8 +59,23 @@ const BoxDetail = () => {
                 }}
             />
 
-            <ThemedCard style={{borderRadius:10,padding:20}}>
-                <ThemedText style={{ fontSize: 18, alignSelf: "center" }} title={true}>{boxData.title}</ThemedText>
+            <ThemedCard style={{ borderRadius: 10, padding: 20 }}>
+                <View>
+                    <ThemedText style={{ fontSize: 18, alignSelf: "center", marginTop: 10, }} title={true}>{boxData.title}</ThemedText>
+
+                </View>
+
+                {/* Yıldız İkonu (Sağ üst köşeye sabitlendi) */}
+                <View style={{ position: "absolute", top: 5, right: 5 }}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Favori tıklandı")}>
+                        {boxData.isFavorite ? (
+                            <Ionicons name="star" size={24} color={theme.primary} /> // Favori rengi genelde altın/sarı olur
+                        ) : (
+                            <Ionicons name="star-outline" size={24} color={theme.border} />
+                        )}
+                    </TouchableOpacity>
+                </View>
+
                 <Spacer height={25} />
                 <View style={styles.typeDateBar}>
                     <ThemedText>Type: {boxData.type}</ThemedText>
@@ -90,14 +106,14 @@ const BoxDetail = () => {
             )}
 
             <Spacer />
-            <ThemedText style={{paddingHorizontal:10}} title={true}>Features</ThemedText>
+            <ThemedText style={{ paddingHorizontal: 10 }} title={true}>Features</ThemedText>
 
 
-            <View 
+            <View
                 style={[
-                    styles.featuresDivider, 
+                    styles.featuresDivider,
                     { backgroundColor: theme.text } // Rengi temadan alıyoruz
-                ]} 
+                ]}
             />
 
             {boxData.hasNote && (
@@ -107,13 +123,7 @@ const BoxDetail = () => {
                         <Ionicons name="document-text" size={24} color={theme.primary} />
 
                         <View
-                            style={{
-                                width: 1.5,           // Çizginin kalınlığı
-                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
-                                backgroundColor: theme.text,
-                                opacity: 0.3,
-                                alignSelf: "center"       // Göz yormaması için saydamlık
-                            }}
+                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
                         />
 
 
@@ -124,18 +134,12 @@ const BoxDetail = () => {
 
             {boxData.hasTodos && (
                 <>
-                    <Spacer height={10} />
+                    <Spacer height={5} />
                     <ThemedCard style={styles.noteCard}>
                         <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
 
                         <View
-                            style={{
-                                width: 1.5,           // Çizginin kalınlığı
-                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
-                                backgroundColor: theme.text,
-                                opacity: 0.3,
-                                alignSelf: "center"       // Göz yormaması için saydamlık
-                            }}
+                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
                         />
 
 
@@ -148,18 +152,12 @@ const BoxDetail = () => {
 
             {boxData.hasLocation && (
                 <>
-                    <Spacer height={10} />
+                    <Spacer height={5} />
                     <ThemedCard style={styles.noteCard}>
                         <Ionicons name="location" size={24} color={theme.primary} />
 
                         <View
-                            style={{
-                                width: 1.5,           // Çizginin kalınlığı
-                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
-                                backgroundColor: theme.text,
-                                opacity: 0.3,
-                                alignSelf: "center"       // Göz yormaması için saydamlık
-                            }}
+                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
                         />
 
 
@@ -171,18 +169,12 @@ const BoxDetail = () => {
 
             {boxData.hasMedia && (
                 <>
-                    <Spacer height={10} />
+                    <Spacer height={5} />
                     <ThemedCard style={styles.noteCard}>
                         <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
 
                         <View
-                            style={{
-                                width: 1.5,           // Çizginin kalınlığı
-                                height: 20,         // Çizginin uzunluğu (ikona uyumlu)
-                                backgroundColor: theme.text,
-                                opacity: 0.3,
-                                alignSelf: "center"       // Göz yormaması için saydamlık
-                            }}
+                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
                         />
 
 
@@ -235,6 +227,13 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         marginTop: 15,
 
+    },
+    featureDividerLine: {
+
+        width: 1.5,           // Çizginin kalınlığı
+        height: 20,         // Çizginin uzunluğu (ikona uyumlu)
+        opacity: 0.3,
+        alignSelf: "center"       // Göz yormaması için saydamlık
     },
     editButton: {
         marginRight: 15,

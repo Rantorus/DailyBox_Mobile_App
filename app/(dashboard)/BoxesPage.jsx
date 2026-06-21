@@ -224,8 +224,15 @@ const BoxesPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('Create Log Tıklandı')
+                
                 setIsCreateCardVisible(false);
+                router.push({
+                  pathname: "/box/CreateBoxPage",
+                  params: {
+                    category: "log",
+                    date: "",
+                  }
+                });
               }}
             >
               <Ionicons name="document-text" size={20} color={theme.primary} />
@@ -237,8 +244,15 @@ const BoxesPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('Create Plan Tıklandı')
+                
                 setIsCreateCardVisible(false);
+                router.push({
+                  pathname: "/box/CreateBoxPage",
+                  params: {
+                    category: "plan",
+                    date: "",
+                  }
+                });
               }}
             >
               <Ionicons name="calendar" size={20} color={theme.primary} />

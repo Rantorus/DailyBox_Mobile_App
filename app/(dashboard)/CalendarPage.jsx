@@ -246,7 +246,6 @@ const CalendarPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                console.log('Create Plan Tıklandı')
                 setIsCreateCardVisible(false);
                 router.push({
                   pathname: "/box/CreateBoxPage",
