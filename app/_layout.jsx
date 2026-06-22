@@ -69,6 +69,14 @@ const InnerLayout = () => {
                     headerStyle: { backgroundColor: theme.headerBackground },
                   }} 
                 />
+                <Stack.Screen 
+                  name="chapter/EditChapterPage" 
+                  options={{ 
+                    title: "Edit Chapter", // Yukarıdaki başlık
+                    headerBackTitle: "Back", // iOS için geri butonu yazısı
+                    headerStyle: { backgroundColor: theme.headerBackground },
+                  }} 
+                />
             </Stack>
         </>
     )

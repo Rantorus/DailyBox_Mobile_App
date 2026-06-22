@@ -49,7 +49,12 @@ const ChapterDetail = () => {
                         <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                                console.log("hello")
+                                router.push({
+                                    pathname: "/chapter/EditChapterPage",
+                                    params: {
+                                        chapterDataId : chapterData.id
+                                    }
+                                });
                             }}
                             style={[styles.editButton, {
                                 backgroundColor: theme.primary + '20',
