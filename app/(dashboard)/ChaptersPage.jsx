@@ -192,6 +192,12 @@ const ChaptersPage = () => {
               style={styles.menuItem}
               onPress={() => {
                 setIsCreateCardVisible(false);
+                router.push({
+                  pathname: "/chapter/CreateChapterPage",
+                  params: {
+
+                  }
+                });
                 
               }}
             >

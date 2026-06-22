@@ -53,6 +53,22 @@ const InnerLayout = () => {
                     headerStyle: { backgroundColor: theme.headerBackground },
                   }} 
                 />
+                <Stack.Screen 
+                  name="chapter/CreateChapterPage" 
+                  options={{ 
+                    title: "Create Chapter", // Yukarıdaki başlık
+                    headerBackTitle: "Back", // iOS için geri butonu yazısı
+                    headerStyle: { backgroundColor: theme.headerBackground },
+                  }} 
+                />
+                <Stack.Screen 
+                  name="chapter/AddBoxesToChapter" 
+                  options={{ 
+                    title: "Add Boxes", // Yukarıdaki başlık
+                    headerBackTitle: "Back", // iOS için geri butonu yazısı
+                    headerStyle: { backgroundColor: theme.headerBackground },
+                  }} 
+                />
             </Stack>
         </>
     )

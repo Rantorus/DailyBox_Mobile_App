@@ -16,7 +16,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import ThemedCard from '../../components/ThemedCard';
 
-const BoxDetail = () => {
+const ChapterDetail = () => {
     const { id } = useLocalSearchParams();
     const { themeName } = useTheme();
     const theme = Colors[themeName];
@@ -147,7 +147,7 @@ const BoxDetail = () => {
     );
 };
 
-export default BoxDetail;
+export default ChapterDetail;
 
 const styles = StyleSheet.create({
     container: {
