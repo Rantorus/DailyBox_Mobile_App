@@ -25,9 +25,9 @@ const EditBoxPage = () => {
     const { boxDataId } = useLocalSearchParams();
 
     const boxData = dummyBoxes.find((data) => {
-            return data.id == boxDataId
-    
-        })
+        return data.id == boxDataId
+
+    })
 
     const [title, setTitle] = useState(boxData.title);
     const [description, setDescription] = useState(boxData.description);
@@ -37,9 +37,14 @@ const EditBoxPage = () => {
     const [isFavorite, setIsFavorite] = useState(boxData.isFavorite);
     const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
 
+    const [isAlreadyAdedNotes, setIsAlreadyAdedNotes] = useState(boxData.hasNote || false);
+    const [isAlreadyAdedTodos, setIsAlreadyAdedTodos] = useState(boxData.hasTodos || false);
+    const [isAlreadyAdedLocation, setIsAlreadyAdedLocation] = useState(boxData.hasLocation || false);
+    const [isAlreadyAdedMedia, setIsAlreadyAdedMedia] = useState(boxData.hasMedia || false);
+
     const router = useRouter();
 
-    
+
 
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
     const availableTypes = useMemo(() => {
@@ -48,7 +53,7 @@ const EditBoxPage = () => {
     }, []);
 
     function handleSave() {
-        
+
     }
 
     return (
@@ -204,7 +209,7 @@ const EditBoxPage = () => {
                     onPress={() => setIsFeaturesVisible(true)}
                 >
                     <Ionicons name="add-circle" size={24} color={theme.primary} />
-                    <ThemedText style={{ color: theme.primary, fontWeight: "bold" }}>Add Features</ThemedText>
+                    <ThemedText title={true} style={{ color: theme.primary }}>Edit Features</ThemedText>
                 </TouchableOpacity>
 
                 {/* ALTTAN ÇIKAN Features PANELİ */}
@@ -214,7 +219,7 @@ const EditBoxPage = () => {
 
                             {/* Panelin Üst Kısmı (Başlık ve Çarpı Butonu) */}
                             <View style={styles.sheetHeader}>
-                                <ThemedText title={true} style={{ fontSize: 20 }}>Add Features</ThemedText>
+                                <ThemedText title={true} style={{ fontSize: 20 }}>Edit Features</ThemedText>
 
                                 <TouchableOpacity onPress={() => setIsFeaturesVisible(false)}>
                                     <Ionicons name="close-circle" size={30} color={theme.textLight} />
@@ -224,62 +229,151 @@ const EditBoxPage = () => {
                             {/* AYIRICI ÇİZGİ */}
                             <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
 
-                            {/* --- NOTES --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Note")}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <Ionicons name="document-text" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Add a Note
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
+                            <ThemedText title={true}>Added Features</ThemedText>
 
-                            <Spacer height={5} />
+                            {/* --- NOTES --- */}
+                            {isAlreadyAdedNotes && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Note")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="document-text" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Aded Notes
+                                            </ThemedText>
+                                            <Ionicons onPress={() => setIsAlreadyAdedNotes(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* --- TODOS --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Checklist")}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Add a Todo
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
-
-                            <Spacer height={5} />
+                            {isAlreadyAdedTodos && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Checklist")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Aded Todos
+                                            </ThemedText>
+                                            <Ionicons onPress={() => setIsAlreadyAdedTodos(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* --- LOCATION --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Location")}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <Ionicons name="location" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Add Location
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
-
-                            <Spacer height={5} />
+                            {isAlreadyAdedLocation && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Location")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="location" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Aded Location
+                                            </ThemedText>
+                                            <Ionicons onPress={() => setIsAlreadyAdedLocation(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* --- MEDIA --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Media")}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Attach Media
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
+                            {isAlreadyAdedMedia && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Media")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Aded Media
+                                            </ThemedText>
+                                            <Ionicons onPress={() => setIsAlreadyAdedMedia(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
-                            {/* En alta biraz boşluk bırakalım ki çok sıkışık durmasın */}
-                            <Spacer height={20} />
+                            <Spacer height={15} />
+                            {/* AYIRICI ÇİZGİ */}
+                            <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
+
+                            <ThemedText title={true}>Available Features</ThemedText>
+
+                            {/* --- NOTES --- */}
+                            {!isAlreadyAdedNotes && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Note")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="document-text" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Add a Note
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+                            {/* --- TODOS --- */}
+                            {!isAlreadyAdedTodos && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Checklist")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Add a Todo
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+                            {/* --- LOCATION --- */}
+                            {!isAlreadyAdedLocation && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Location")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="location" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Add Location
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+                            {/* --- MEDIA --- */}
+                            {!isAlreadyAdedMedia && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Media")}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Attach Media
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+
 
                         </View>
                     </ThemedView>
