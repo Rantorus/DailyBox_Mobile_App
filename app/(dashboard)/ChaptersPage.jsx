@@ -23,7 +23,6 @@ const ChaptersPage = () => {
   const { themeName } = useTheme();
   const theme = Colors[themeName]
   const router = useRouter()
-  const [shownCategory, setShownCategory] = useState(true);
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
 
@@ -145,7 +144,7 @@ const ChaptersPage = () => {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <Pressable onPress={() => console.log("chapter ac")}>
+            <Pressable onPress={() => router.push(`chapter/${item.id}`)}>
               <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

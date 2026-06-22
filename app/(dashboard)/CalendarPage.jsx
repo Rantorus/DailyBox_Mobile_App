@@ -6,6 +6,7 @@ import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
 
+
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
@@ -191,7 +192,16 @@ const CalendarPage = () => {
           <Pressable onPress={() => router.push(`box/${item.id}`)}>
             <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
               <ThemedText style={styles.title}>{item.title}</ThemedText>
-              <ThemedText>{item.date.split('T')[0]}</ThemedText>
+
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <ThemedText>{item.date.split('T')[0]}</ThemedText>
+                  {item.isFavorite ? (
+                    <Ionicons name="star" size={24} color={theme.primary} />
+                  ) : (
+                    <Ionicons name="star-outline" size={24} color={theme.border} />
+                  )}
+                </View>
+
               <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
             </ThemedCard>
           </Pressable>
@@ -294,8 +304,13 @@ const styles = StyleSheet.create({
   title: { fontWeight: 'bold', fontSize: 16, marginBottom: 4 },
   list: { paddingBottom: 20 },
   card: {
-    width: "92%", marginHorizontal: 15, marginVertical: 8, padding: 12,
-    borderLeftWidth: 5, borderRadius: 8,
+    width: "92%",
+    marginHorizontal: 15,
+    marginVertical: 8,
+    padding: 12,
+    borderLeftWidth: 5,
+    borderRadius: 8,
+    gap:5,
   },
   createPlus: {
     position: 'absolute',
