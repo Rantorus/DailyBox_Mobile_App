@@ -1,15 +1,6 @@
-import {
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    TouchableWithoutFeedback,
-    Keyboard,
-    ScrollView,
-    KeyboardAvoidingView,
-    Platform,
-} from 'react-native';
+import { StyleSheet,TouchableOpacity,View,TouchableWithoutFeedback,Keyboard,ScrollView,KeyboardAvoidingView,Platform,} from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -19,13 +10,22 @@ import ThemedInput from '../../components/ThemedInput';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-const CreateNotePage = () => {
+import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+
+const EditNotePage = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
 
-    const [title, setTitle] = useState("");
-    const [content, setContent] = useState("");
+    const { boxDataId } = useLocalSearchParams();
+    
+        const boxData = dummyBoxes.find((data) => {
+            return data.id == boxDataId
+    
+        })
+
+    const [title, setTitle] = useState(boxData.note.title);
+    const [content, setContent] = useState(boxData.note.content);
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [selectedColor, setSelectedColor] = useState(theme.text); // Sadece bu state yeterli
@@ -34,6 +34,7 @@ const CreateNotePage = () => {
     const wordCount = content.trim() === "" ? 0 : content.trim().split(/\s+/).length;
 
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+
 
     useEffect(() => {
         const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
@@ -73,7 +74,7 @@ const CreateNotePage = () => {
                         >
                             <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
                             <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
-                                Create
+                                Edit
                             </ThemedText>
                         </TouchableOpacity>
                     )
@@ -166,7 +167,7 @@ const CreateNotePage = () => {
     );
 };
 
-export default CreateNotePage;
+export default EditNotePage;
 
 const styles = StyleSheet.create({
     container: {

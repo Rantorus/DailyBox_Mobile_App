@@ -46,7 +46,7 @@ const NoteDetails = () => {
                             activeOpacity={0.7}
                             onPress={() => {
                                 router.push({
-                                    pathname: "/box/EditBoxPage",
+                                    pathname: "/note/EditNotePage",
                                     params: {
                                         boxDataId: boxData.id
                                     }
