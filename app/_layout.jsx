@@ -7,7 +7,7 @@ import { Colors } from '../constants/Colors'
 // Hem Provider'ı hem de hook'u import ediyoruz
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext"
 
-// 1. İÇ BİLEŞEN (TÜKETİCİ): Provider'ın İÇİNDE kaldığı için temayı güvenle okuyabilir.
+// 1. İÇ BİLEŞEN
 const InnerLayout = () => {
     const { themeName } = useTheme(); 
     const theme = Colors[themeName];  
@@ -21,92 +21,18 @@ const InnerLayout = () => {
             }}>
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
                 <Stack.Screen name="index" options={{ title: "Daily Box" }} />
-                <Stack.Screen 
-                  name="box/[id]" 
-                  options={{ 
-                    title: "Box Details", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="chapter/[id]" 
-                  options={{ 
-                    title: "Chapter Details", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="box/CreateBoxPage" 
-                  options={{ 
-                    title: "Create Box", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="box/EditBoxPage" 
-                  options={{ 
-                    title: "Edit Box", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="chapter/CreateChapterPage" 
-                  options={{ 
-                    title: "Create Chapter", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="chapter/AddBoxesToChapter" 
-                  options={{ 
-                    title: "Add Boxes", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="chapter/EditChapterPage" 
-                  options={{ 
-                    title: "Edit Chapter", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="note/[id]" 
-                  options={{ 
-                    title: "Note Details", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="note/CreateNotePage" 
-                  options={{ 
-                    title: "Create Note", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
-                <Stack.Screen 
-                  name="note/EditNotePage" 
-                  options={{ 
-                    title: "Edit Note", // Yukarıdaki başlık
-                    headerBackTitle: "Back", // iOS için geri butonu yazısı
-                    headerStyle: { backgroundColor: theme.headerBackground },
-                  }} 
-                />
+                
+                {/* ✅ TÜM MODÜLLER KENDİ KLASÖRLERİNE (LAYOUTLARINA) YÖNLENDİRİLDİ */}
+                <Stack.Screen name="box" options={{ headerShown: false }} />
+                <Stack.Screen name="chapter" options={{ headerShown: false }} />
+                <Stack.Screen name="note" options={{ headerShown: false }} />
+                <Stack.Screen name="todo" options={{ headerShown: false }} />
             </Stack>
         </>
     )
 }
 
-// 2. DIŞ BİLEŞEN (SAĞLAYICI): Tek görevi İç Bileşeni sarmalamaktır. İçinde useTheme ÇAĞRILAMAZ!
+// 2. DIŞ BİLEŞEN
 const RootLayout = () => {
     return (
         <ThemeProvider>
@@ -115,6 +41,6 @@ const RootLayout = () => {
     )
 }
 
-export default RootLayout
+export default RootLayout;
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({});

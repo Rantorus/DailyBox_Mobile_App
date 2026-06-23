@@ -247,7 +247,14 @@ const CreateBoxPage = () => {
                             <Spacer height={5} />
 
                             {/* --- TODOS --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Checklist")}>
+                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                router.push({
+                                    pathname: "/todo/CreateTodo",
+                                    params: {
+                                        
+                                    }
+                                });
+                            }}>
                                 <ThemedCard style={styles.noteCard}>
                                     <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
                                     <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />

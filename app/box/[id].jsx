@@ -145,18 +145,21 @@ const BoxDetail = () => {
             {boxData.hasTodos && (
                 <>
                     <Spacer height={5} />
-                    <ThemedCard style={styles.noteCard}>
-                        <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`todo/${boxData.id}`)}>
+                        <ThemedCard style={styles.noteCard}>
+                            <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
 
-                        <View
-                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
-                        />
+                            <View
+                                style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
+                            />
 
 
-                        <ThemedText style={{ alignSelf: "center" }} title={true}>Todos</ThemedText>
-                        <ThemedText style={{ alignSelf: "center" }} title={true}>({boxData.todos.length} tasks)</ThemedText>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>Todos</ThemedText>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>({boxData.todos.length} tasks)</ThemedText>
 
-                    </ThemedCard>
+                        </ThemedCard>
+                    </TouchableOpacity>
+
                 </>
             )}
 
