@@ -41,8 +41,7 @@ const BoxDetail = () => {
                                 router.push({
                                     pathname: "/box/EditBoxPage",
                                     params: {
-                                        boxDataId : boxData.id,
-                                        selectedBoxesValues: selectedBoxes,
+                                        boxDataId : boxData.id
                                     }
                                 });
                             }}

@@ -22,6 +22,8 @@ const CreateChapterPage = () => {
     const theme = Colors[themeName];
     const router = useRouter();
 
+
+    // selectedBoxesValues'den şu anlık bir şey gelmiyor ilerde veri göndermem gerekirse diye şimdilik dursun
     const { chapterDataId, selectedBoxesValues } = useLocalSearchParams();
 
     const chapterData = dummyChapters.find((data) => data.id == chapterDataId);
@@ -45,7 +47,7 @@ const CreateChapterPage = () => {
         // 1. Orijinal kutular (varsa)
         const initialBoxes = chapterData?.boxIds || [];
 
-        // 2. Yeni seçilen kutular (URL'den geliyorsa)
+        // 2. Yeni seçilen kutular (URL'den geliyorsa) (aslında gerek yok ama şimdilik dursun)
         const added = selectedBoxesValues ? JSON.parse(selectedBoxesValues) : [];
 
         // 3. İkisini birleştir ve tekrar edenleri (Set ile) sil
@@ -55,8 +57,14 @@ const CreateChapterPage = () => {
     // Component İçinde, State'lerin hemen altına şu useEffect'i ekle:
     useEffect(() => {
         // AddBoxesToChapter sayfasından fırlatılacak olan 'boxes_selected' olayını dinliyoruz
-        const subscription = DeviceEventEmitter.addListener('boxes_selected', (ids) => {
-            setSelectedBoxes(ids);
+        const subscription = DeviceEventEmitter.addListener('boxes_selected', (newIds) => {
+
+            // Önceki seçili kutuları (prevBoxes) alıp, yeni gelenlerle (newIds) birleştiriyoruz
+            setSelectedBoxes((prevBoxes) => {
+                // İki diziyi birleştir ve Set ile tekrar edenleri (duplicate) temizle
+                return [...new Set([...prevBoxes, ...newIds])];
+            });
+
         });
 
         // Sayfa kapatıldığında dinleyiciyi temizliyoruz (Memory leak önlemek için)
@@ -87,6 +95,14 @@ const CreateChapterPage = () => {
             console.log("bos deger var");
         }
     }
+
+    const handleRemoveBox = (boxIdToRemove) => {
+        // Önceki state'i alıyoruz (prevBoxes)
+        setSelectedBoxes((prevBoxes) =>
+            // Silinmek istenen ID'ye EŞİT OLMAYANLARI filtreleyip yeni listeyi oluşturuyoruz
+            prevBoxes.filter(id => id !== boxIdToRemove)
+        );
+    };
 
     return (
         <View style={{ flex: 1 }}>
@@ -264,11 +280,27 @@ const CreateChapterPage = () => {
                                         <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
                                     </View>
 
-                                    <ThemedText >{item.description}</ThemedText>
+                                    <ThemedText>{item.description}</ThemedText>
 
-                                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5 }}>
+                                    {/* ALT SATIR: Tarih, Favori İkonu ve Silme Butonu */}
+                                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
                                         <ThemedText style={{ color: 'gray' }}>{item.date.split('T')[0]}</ThemedText>
-                                        {item.isFavorite && <Ionicons name="star" size={18} color={theme.primary} />}
+
+                                        {item.isFavorite ? (
+                                            <Ionicons name="star" size={18} color={theme.primary} />
+                                        ) : (
+                                            <Ionicons name="star-outline" size={18} color={theme.border} />
+                                        )}
+
+                                        {/* SİLME BUTONU */}
+                                        <TouchableOpacity
+                                            activeOpacity={0.6}
+                                            // hitSlop: Butonun tıklanabilir alanını ikonun dışına doğru görünmez şekilde genişletir.
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            onPress={() => handleRemoveBox(item.id)}
+                                        >
+                                            <Ionicons name="trash-outline" size={22} color="#FF3B30" />
+                                        </TouchableOpacity>
                                     </View>
                                 </ThemedCard>
                             )}

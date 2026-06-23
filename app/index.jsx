@@ -63,12 +63,14 @@ const index = () => {
                 justifyContent: "center",
                 alignItems: "center"
             }}>
-
-                <ActivityIndicator size="large" />
+                <ActivityIndicator
+                    size="large"
+                    color={theme.primary}
+                    style={{ transform: [{ scale: 1.3 }] }} // 1.0 normal "large" boyutudur, 1.3 ile %30 büyütmüş oluyoruz
+                />
             </ThemedView>
-        )
+        );
     }
-
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
