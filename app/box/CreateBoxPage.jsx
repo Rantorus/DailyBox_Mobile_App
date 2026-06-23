@@ -57,7 +57,7 @@ const CreateBoxPage = () => {
                 {/* Ekranın üstündeki Box detail ve edit yazısı*/}
                 <Stack.Screen
                     options={{
-                        
+
                         title: category === "plan" ? "Create Plan Box" : "Create Log Box",
 
                         headerRight: () => (
@@ -226,7 +226,14 @@ const CreateBoxPage = () => {
                             <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
 
                             {/* --- NOTES --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Note")}>
+                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                router.push({
+                                    pathname: "/note/CreateNotePage",
+                                    params: {
+                                        
+                                    }
+                                });
+                            }}>
                                 <ThemedCard style={styles.noteCard}>
                                     <Ionicons name="document-text" size={24} color={theme.primary} />
                                     <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />

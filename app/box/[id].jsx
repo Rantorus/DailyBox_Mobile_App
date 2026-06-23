@@ -41,7 +41,7 @@ const BoxDetail = () => {
                                 router.push({
                                     pathname: "/box/EditBoxPage",
                                     params: {
-                                        boxDataId : boxData.id
+                                        boxDataId: boxData.id
                                     }
                                 });
                             }}
@@ -126,16 +126,19 @@ const BoxDetail = () => {
             {boxData.hasNote && (
                 <>
                     <Spacer height={20} />
-                    <ThemedCard style={styles.noteCard}>
-                        <Ionicons name="document-text" size={24} color={theme.primary} />
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`note/${boxData.id}`)}>
+                        <ThemedCard style={styles.noteCard}>
+                            <Ionicons name="document-text" size={24} color={theme.primary} />
 
-                        <View
-                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
-                        />
+                            <View
+                                style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
+                            />
 
 
-                        <ThemedText style={{ alignSelf: "center" }} title={true}>Notes</ThemedText>
-                    </ThemedCard>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>Notes</ThemedText>
+                        </ThemedCard>
+                    </TouchableOpacity>
+
                 </>
             )}
 
