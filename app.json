@@ -34,6 +34,12 @@
         {
           "calendarPermission": "The app needs to access your calendar."
         }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Uygulamanın ses kaydedebilmesi için mikrofona erişmesi gerekiyor."
+        }
       ]
     ]
   }
