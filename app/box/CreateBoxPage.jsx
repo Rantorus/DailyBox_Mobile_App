@@ -282,7 +282,14 @@ const CreateBoxPage = () => {
                             <Spacer height={5} />
 
                             {/* --- MEDIA --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Media")}>
+                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                router.push({
+                                    pathname: "/media/UploadMedia",
+                                    params: {
+                                        
+                                    }
+                                });
+                            }}>
                                 <ThemedCard style={styles.noteCard}>
                                     <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
                                     <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />

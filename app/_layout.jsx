@@ -27,6 +27,7 @@ const InnerLayout = () => {
                 <Stack.Screen name="chapter" options={{ headerShown: false }} />
                 <Stack.Screen name="note" options={{ headerShown: false }} />
                 <Stack.Screen name="todo" options={{ headerShown: false }} />
+                <Stack.Screen name="media" options={{ headerShown: false }} />
             </Stack>
         </>
     )
