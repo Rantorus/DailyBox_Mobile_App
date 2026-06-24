@@ -284,7 +284,7 @@ const CreateBoxPage = () => {
                             {/* --- MEDIA --- */}
                             <TouchableOpacity activeOpacity={0.7} onPress={() => {
                                 router.push({
-                                    pathname: "/media/UploadMedia",
+                                    pathname: "/media/create/UploadPhoto",
                                     params: {
                                         
                                     }
