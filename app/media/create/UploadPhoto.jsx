@@ -17,18 +17,13 @@ export default function UploadPhoto() {
     const theme = Colors[themeName];
     const router = useRouter();
 
-    const [activeTab, setActiveTab] = useState('Photos');
 
-    // ==========================================
     // Global Store — useState yerine
-    // ==========================================
     const images = useMediaStore(state => state.images);
     const addImage = useMediaStore(state => state.addImage);
 
-    // ==========================================
-    // FOTOĞRAF İŞLEMLERİ
-    // ==========================================
 
+    // FOTOĞRAF İŞLEMLERİ
     const saveImageToLocal = async (cacheUri) => {
         try {
             const sourceFile = new File(cacheUri);
@@ -189,17 +184,10 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1,
     },
-    image: { width: '100%', height: '100%' },
-    zoomOverlay: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingVertical: 6,
-        alignItems: 'center',
+    image: {
+        width: '100%',
+        height: '100%'
     },
-    zoomText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
     bottomBar: {
         flexDirection: 'row',
         justifyContent: 'space-around',

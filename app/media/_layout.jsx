@@ -7,6 +7,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import ThemedText from '../../components/ThemedText';
 
+const ICON_SIZE = 24;
+
 const MediaLayout = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
@@ -24,7 +26,7 @@ const MediaLayout = () => {
             <Stack.Screen
                 name="create"
                 options={{
-                    title: "Add Media",
+                    title: "Create Media",
                     headerStyle: { backgroundColor: theme.headerBackground },
                     headerTintColor: theme.text,
                     headerShadowVisible: false,
@@ -73,7 +75,7 @@ const MediaLayout = () => {
                     headerLeft: () => (
                         <TouchableOpacity
                             activeOpacity={0.7}
-                            onPress={() => router.back()}
+                            onPress={() => router.dismiss()}
                             style={{ marginLeft: -5, marginRight: 15 }}
                         >
                             <Ionicons name="chevron-back" size={24} color={theme.textLight} />
@@ -82,7 +84,7 @@ const MediaLayout = () => {
                     headerRight: () => (
                         <TouchableOpacity
                             activeOpacity={0.7}
-                            onPress={handleCreate}
+                            onPress={() => router.push("media/edit/EditPhoto")}
                             style={{
                                 marginRight: 10,
                                 flexDirection: 'row',
@@ -107,7 +109,7 @@ const MediaLayout = () => {
             <Stack.Screen
                 name="edit"
                 options={{
-                    title: "Manage Media",
+                    title: "Edit Media",
                     headerStyle: { backgroundColor: theme.headerBackground },
                     headerTintColor: theme.text,
                     headerTitleStyle: { fontWeight: 'bold' },
@@ -115,7 +117,7 @@ const MediaLayout = () => {
                     headerLeft: () => (
                         <TouchableOpacity
                             activeOpacity={0.7}
-                            onPress={() => router.back()}
+                            onPress={() => router.dismiss()}
                             style={{ marginLeft: -5, marginRight: 15 }}
                         >
                             <Ionicons name="chevron-back" size={24} color={theme.textLight} />

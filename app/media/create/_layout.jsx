@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 
+const ICON_SIZE = 24;
+
 const MediaCreateLayout = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
@@ -16,9 +18,13 @@ const MediaCreateLayout = () => {
                 tabBarActiveTintColor: theme.primary,
                 tabBarInactiveTintColor: theme.textLight,
                 tabBarStyle: {
-                    backgroundColor: theme.headerBackground,
+                    backgroundColor: theme.tabBarBackground,
                     borderTopColor: theme.border,
+                    paddingTop: 10,
+                    height: 80
                 },
+                tabBarActiveTintColor: theme.tabBarIconActive,
+                tabBarInactiveTintColor: theme.tabBarIconInactive,
             }}
         >
             <Tabs.Screen
@@ -26,7 +32,7 @@ const MediaCreateLayout = () => {
                 options={{
                     title: 'Photo',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="image-outline" size={size} color={color} />
+                        <Ionicons name="image-outline" size={ICON_SIZE} color={color} />
                     ),
                 }}
             />
@@ -35,7 +41,7 @@ const MediaCreateLayout = () => {
                 options={{
                     title: 'Audio',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="mic-outline" size={size} color={color} />
+                        <Ionicons name="mic-outline" size={ICON_SIZE} color={color} />
                     ),
                 }}
             />
@@ -44,7 +50,7 @@ const MediaCreateLayout = () => {
                 options={{
                     title: 'Docs',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="document-text-outline" size={size} color={color} />
+                        <Ionicons name="document-text-outline" size={ICON_SIZE}size={ICON_SIZE} color={color} />
                     ),
                 }}
             />

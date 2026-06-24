@@ -41,7 +41,7 @@ const DashboardLayout = () => {
                 <Tabs.Screen name="BoxesPage" options={{
                     title: "Boxes",
                     tabBarIcon: ({ focused }) => (
-                        <MaterialCommunityIcons name={focused ? "package-variant" : "package-variant-closed"} size={ICON_SIZE} color="black"
+                        <MaterialCommunityIcons size={ICON_SIZE} name={focused ? "package-variant" : "package-variant-closed"} size={ICON_SIZE} color="black"
                             color={focused ? theme.tabBarIconActive : theme.tabBarIconInactive}
                         />
 
@@ -51,7 +51,7 @@ const DashboardLayout = () => {
                 <Tabs.Screen name="ChaptersPage" options={{
                     title: "Chapters",
                     tabBarIcon: ({ focused }) => (
-                        <MaterialCommunityIcons name={focused ? "inbox-multiple" : "inbox-multiple-outline"} size={ICON_SIZE} color="black"
+                        <MaterialCommunityIcons size={ICON_SIZE} name={focused ? "inbox-multiple" : "inbox-multiple-outline"} size={ICON_SIZE} color="black"
                             color={focused ? theme.tabBarIconActive : theme.tabBarIconInactive}
                         />
                     )

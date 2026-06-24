@@ -183,6 +183,7 @@ const BoxDetail = () => {
             {boxData.hasMedia && (
                 <>
                     <Spacer height={5} />
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`media/view/ViewPhoto`)}>
                     <ThemedCard style={styles.noteCard}>
                         <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
 
@@ -194,6 +195,7 @@ const BoxDetail = () => {
                         <ThemedText style={{ alignSelf: "center" }} title={true}>Media</ThemedText>
 
                     </ThemedCard>
+                    </TouchableOpacity>
                 </>
             )}
 
