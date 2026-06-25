@@ -17,13 +17,15 @@ export default function UploadPhoto() {
     const theme = Colors[themeName];
     const router = useRouter();
 
-
-    // Global Store — useState yerine
-    const images = useMediaStore(state => state.images);
+    // SADECE EKLEME FONKSİYONUNU ALIYORUZ (Tüm listeyi çekmiyoruz)
     const addImage = useMediaStore(state => state.addImage);
 
+    // YEREL VİTRİN: Sadece bu sayfa açıkken yüklenenleri ekranda göstermek için
+    const [localImages, setLocalImages] = useState([]);
 
+    // ==========================================
     // FOTOĞRAF İŞLEMLERİ
+    // ==========================================
     const saveImageToLocal = async (cacheUri) => {
         try {
             const sourceFile = new File(cacheUri);
@@ -38,7 +40,8 @@ export default function UploadPhoto() {
                 date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
             };
 
-            addImage(newImage); // ← store'a ekle
+            addImage(newImage); // 1. GLOBAL DEPOYA GÖNDER (View ekranı için)
+            setLocalImages(prev => [...prev, newImage]); // 2. YEREL VİTRİNE EKLE (Sadece bu anlık ekran için)
 
         } catch (error) {
             Alert.alert("Hata", "Fotoğraf kaydedilemedi.");
@@ -55,12 +58,11 @@ export default function UploadPhoto() {
 
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
-            allowsMultipleSelection: true, // ✅ Çoklu seçimi aktif hale getiren parametre
+            allowsMultipleSelection: true,
             quality: 0.8,
         });
 
         if (!result.canceled) {
-            // ✅ Seçilen tüm fotoğrafları sırayla yerel hafızaya kaydeder
             for (const asset of result.assets) {
                 await saveImageToLocal(asset.uri);
             }
@@ -87,10 +89,9 @@ export default function UploadPhoto() {
         <ThemedView style={styles.container} safe={true}>
             <StatusBar style={theme.statusBarStyle} />
 
-
             {/* İÇERİK */}
             <View style={styles.contentContainer}>
-                {images.length === 0 ? (
+                {localImages.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={[styles.dashedBox, { borderColor: theme.primary }]}>
                             <Ionicons name="images-outline" size={40} color={theme.primary} style={{ marginBottom: 15 }} />
@@ -105,16 +106,16 @@ export default function UploadPhoto() {
                 ) : (
                     <View style={{ flex: 1 }}>
                         <ThemedText style={{ color: theme.textLight, fontSize: 13, marginBottom: 15, marginLeft: 5 }}>
-                            {`${images.length} photo${images.length > 1 ? 's' : ''} added`}
+                            {`${localImages.length} photo${localImages.length > 1 ? 's' : ''} added`}
                         </ThemedText>
                         <FlatList
-                            data={images}
+                            data={localImages}
                             keyExtractor={item => item.id}
                             numColumns={2}
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 20 }}
                             columnWrapperStyle={{ justifyContent: 'flex-start' }}
-                            renderItem={({ item, index }) => (
+                            renderItem={({ item }) => (
                                 <View style={[styles.imageWrapper, { borderColor: theme.border }]}>
                                     <Image source={{ uri: item.uri }} style={styles.image} />
                                 </View>
@@ -176,10 +177,9 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     imageWrapper: {
-        // flex: 1 YERİNE AŞAĞIDAKİLERİ KULLANIYORUZ
-        width: '47%', // Ekranın %50'sinden biraz az (marginler için pay bırakıyoruz)
-        aspectRatio: 1, // Kare kalmasını sağlar
-        margin: '1.5%', // Sağdan soldan eşit boşluk
+        width: '47%',
+        aspectRatio: 1,
+        margin: '1.5%',
         borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 1,

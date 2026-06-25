@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Alert, Modal, TextInput } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, Alert, Modal, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system/next';
@@ -14,22 +14,22 @@ import { Colors } from '../../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 import { useMediaStore } from '../../../store/mediaStore';
 
-
+// ==========================================
 // ALT BİLEŞEN: SES OYNATICI (PLAYER)
+// ==========================================
 const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
     const [sound, setSound] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(1); 
     const [position, setPosition] = useState(0);
 
-    // 1. DÜZELTME: Sesi play tuşuna basılmadan ÖNCE, sayfa açılır açılmaz yüklüyoruz ki süresi belli olsun.
     useEffect(() => {
         let currentSound = null;
         
         const initSound = async () => {
             const { sound: newSound, status } = await Audio.Sound.createAsync(
                 { uri: item.uri },
-                { shouldPlay: false }, // Başlangıçta sessizce yükle
+                { shouldPlay: false },
                 onPlaybackStatusUpdate
             );
             currentSound = newSound;
@@ -39,7 +39,6 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         
         initSound();
 
-        // Sayfa değiştiğinde veya ses silindiğinde hafızayı temizle
         return () => {
             if (currentSound) {
                 currentSound.unloadAsync();
@@ -47,7 +46,6 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         };
     }, [item.uri]);
 
-    // 2. DÜZELTME: Başka bir ses çalmaya başlarsa veya yeni işlem yapılırsa bu sesi durdur.
     useEffect(() => {
         if (playingId !== item.id && isPlaying && sound) {
             sound.pauseAsync();
@@ -62,20 +60,20 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
             if (status.didJustFinish) {
                 setIsPlaying(false);
                 setPosition(0);
-                setPlayingId(null); // Şarkı bitince oynatılan ID'yi sıfırla
+                setPlayingId(null);
             }
         }
     };
 
     const handlePlayPause = async () => {
-        if (!sound) return; // Henüz yüklenmediyse tepki verme
+        if (!sound) return;
 
         if (isPlaying) {
             await sound.pauseAsync();
             setIsPlaying(false);
             setPlayingId(null);
         } else {
-            setPlayingId(item.id); // Çalmaya başlayan ses kendini "Şu an çalan" olarak ilan eder
+            setPlayingId(item.id);
             await sound.playAsync();
             setIsPlaying(true);
         }
@@ -99,7 +97,6 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
             </TouchableOpacity>
             
             <View style={styles.playerContent}>
-                {/* 3. DÜZELTME: Dosyanın Başlığını Gösterme */}
                 <ThemedText style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 2 }} numberOfLines={1}>
                     {item.name}
                 </ThemedText>
@@ -138,21 +135,21 @@ export default function UploadAudio() {
     const theme = Colors[themeName];
     const router = useRouter();
 
-    // ZUSTAND STORE
-    const audios = useMediaStore(state => state.audios);
+    // GLOBAL STORE 
+    const audios = useMediaStore(state => state.audios); // Sadece otomatik isim önerisi hesaplamak için tutuyoruz
     const addAudio = useMediaStore(state => state.addAudio);
     const removeAudio = useMediaStore(state => state.removeAudio);
 
-    // OYNATMA KONTROLÜ (Sadece 1 ses çalsın diye)
+    // YEREL VİTRİN (Sadece bu ekran açıkken eklenenleri tutar, başlangıçta boştur)
+    const [localAudios, setLocalAudios] = useState([]);
+
     const [playingAudioId, setPlayingAudioId] = useState(null);
 
-    // KAYIT STATE'LERİ
     const [recording, setRecording] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
 
-    // KAYIT İSİMLENDİRME (MODAL) STATE'LERİ
     const [showTitleModal, setShowTitleModal] = useState(false);
     const [pendingUri, setPendingUri] = useState(null);
     const [recordTitle, setRecordTitle] = useState('');
@@ -167,9 +164,19 @@ export default function UploadAudio() {
         })();
     }, []);
 
-    // --- DOSYADAN SEÇME İŞLEMİ ---
+    // ==========================================
+    // YEREL VE GLOBAL SİLME İŞLEMİ
+    // ==========================================
+    const handleRemoveLocal = (id) => {
+        removeAudio(id); // 1. Globalden sil
+        setLocalAudios(prev => prev.filter(audio => audio.id !== id)); // 2. Ekrandan (Yerelden) sil
+    };
+
+    // ==========================================
+    // DOSYA SEÇME
+    // ==========================================
     const pickAudioFile = async () => {
-        setPlayingAudioId(null); // Dosya seçmeye basıldığında çalan tüm sesleri sustur
+        setPlayingAudioId(null);
 
         let result = await DocumentPicker.getDocumentAsync({
             type: 'audio/*', 
@@ -188,12 +195,16 @@ export default function UploadAudio() {
 
                 await sourceFile.copy(destinationFile);
 
-                addAudio({
+                const newAudio = {
                     id: Date.now().toString(),
                     uri: destinationFile.uri,
                     name: originalName, 
                     date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                });
+                };
+
+                addAudio(newAudio); // GLOBAL
+                setLocalAudios(prev => [...prev, newAudio]); // YEREL
+
             } catch (error) {
                 Alert.alert("Hata", "Ses dosyası eklenemedi.");
                 console.error("Dosya Kopyalama Hatası:", error);
@@ -201,9 +212,11 @@ export default function UploadAudio() {
         }
     };
 
-    // --- SES KAYDETME İŞLEMLERİ ---
+    // ==========================================
+    // KAYIT İŞLEMLERİ
+    // ==========================================
     const startRecording = async () => {
-        setPlayingAudioId(null); // Kayda basıldığında çalan tüm sesleri sustur
+        setPlayingAudioId(null);
 
         try {
             const { granted } = await Audio.getPermissionsAsync();
@@ -248,7 +261,6 @@ export default function UploadAudio() {
         }
     };
 
-    // --- KAYDI DURDURMA VE İSİM PENCERESİNİ AÇMA ---
     const stopRecording = async (save = true) => {
         if (!recording) return;
 
@@ -258,15 +270,15 @@ export default function UploadAudio() {
         
         if (save) {
             const uri = recording.getURI();
-            setPendingUri(uri); // Dosya yolunu hafızaya al
-            setRecordTitle(`Ses Kaydı ${audios.length + 1}`); // Varsayılan isim önerisi
-            setShowTitleModal(true); // İsim sorma penceresini aç
+            setPendingUri(uri);
+            // Global uzunluğa bakarak mantıklı bir varsayılan isim önerisi sunuyoruz
+            setRecordTitle(`Ses Kaydı ${audios.length + 1}`);
+            setShowTitleModal(true);
         }
         
         setRecording(null);
     };
 
-    // --- İSMİ ONAYLAYIP KAYIT İŞLEMİNİ BİTİRME ---
     const finalizeRecordingSave = async () => {
         if (!pendingUri) return;
 
@@ -276,14 +288,16 @@ export default function UploadAudio() {
 
         await sourceFile.copy(destinationFile);
 
-        addAudio({
+        const newAudio = {
             id: Date.now().toString(),
             uri: destinationFile.uri,
-            name: recordTitle.trim() || "Ses Kaydı", // Kullanıcı ad girmezse varsayılan
+            name: recordTitle.trim() || "Ses Kaydı",
             date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        });
+        };
 
-        // Pencereyi kapat ve temizle
+        addAudio(newAudio); // GLOBAL
+        setLocalAudios(prev => [...prev, newAudio]); // YEREL
+
         setShowTitleModal(false);
         setPendingUri(null);
         setRecordTitle('');
@@ -300,9 +314,9 @@ export default function UploadAudio() {
         <ThemedView style={styles.container} safe={true}>
             <StatusBar style={theme.statusBarStyle} />
 
-            {/* İÇERİK */}
+            {/* İÇERİK - Artık localAudios kullanılıyor */}
             <View style={styles.contentContainer}>
-                {audios.length === 0 ? (
+                {localAudios.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={[styles.dashedBox, { borderColor: theme.primary }]}>
                             <Ionicons name="musical-notes-outline" size={40} color={theme.primary} style={{ marginBottom: 15 }} />
@@ -317,10 +331,10 @@ export default function UploadAudio() {
                 ) : (
                     <View style={{ flex: 1 }}>
                         <ThemedText style={{ color: theme.textLight, fontSize: 13, marginBottom: 15, marginLeft: 5 }}>
-                            {`${audios.length} audio file${audios.length > 1 ? 's' : ''} added`}
+                            {`${localAudios.length} audio file${localAudios.length > 1 ? 's' : ''} added`}
                         </ThemedText>
                         <FlatList
-                            data={audios}
+                            data={localAudios}
                             keyExtractor={item => item.id}
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 20 }}
@@ -328,7 +342,7 @@ export default function UploadAudio() {
                                 <AudioPlayer 
                                     item={item} 
                                     theme={theme} 
-                                    onRemove={removeAudio} 
+                                    onRemove={handleRemoveLocal} 
                                     playingId={playingAudioId} 
                                     setPlayingId={setPlayingAudioId} 
                                 />
@@ -340,7 +354,6 @@ export default function UploadAudio() {
 
             {/* ALT BAR: KAYIT VEYA NORMAL BUTONLAR */}
             {isRecording ? (
-                // KAYIT PANELİ
                 <View style={[styles.recordingBar, { backgroundColor: theme.cardBackground, borderTopColor: theme.border }]}>
                     <View style={styles.recordingHeader}>
                         <Ionicons name={isPaused ? "pause-circle" : "ellipse"} size={14} color={isPaused ? theme.textLight : "red"} />
@@ -368,7 +381,6 @@ export default function UploadAudio() {
                     </View>
                 </View>
             ) : (
-                // STANDART BUTONLAR
                 <View style={[styles.bottomBar, { borderTopColor: theme.border }]}>
                     <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.primary + '20' }]} onPress={pickAudioFile}>
                         <Ionicons name="folder-open" size={20} color={theme.primary} />
@@ -382,33 +394,35 @@ export default function UploadAudio() {
                 </View>
             )}
 
-            {/* --- İSİM SORMASI İÇİN MODAL PENCERESİ --- */}
-            <Modal visible={showTitleModal} transparent animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalCard, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
-                        <ThemedText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>
-                            Name your recording
-                        </ThemedText>
-                        
-                        <TextInput
-                            style={[styles.titleInput, { color: theme.text, borderColor: theme.border }]}
-                            value={recordTitle}
-                            onChangeText={setRecordTitle}
-                            placeholder="Enter title..."
-                            placeholderTextColor={theme.textLight}
-                            autoFocus
-                        />
-                        
-                        <View style={styles.modalActions}>
-                            <TouchableOpacity onPress={() => setShowTitleModal(false)} style={styles.modalCancelButton}>
-                                <ThemedText style={{ color: theme.textLight, fontWeight: 'bold' }}>Cancel</ThemedText>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={finalizeRecordingSave} style={[styles.modalSaveButton, { backgroundColor: theme.primary }]}>
-                                <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Save</ThemedText>
-                            </TouchableOpacity>
+            {/* --- İSİM SORMASI İÇİN %100 OPAK MODAL PENCERESİ VE KLAVYE GİZLEME --- */}
+            <Modal visible={showTitleModal} animationType="slide">
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                    <ThemedView style={styles.modalOverlay} safe={true}>
+                        <View style={[styles.modalCard, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+                            <ThemedText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>
+                                Name your recording
+                            </ThemedText>
+                            
+                            <TextInput
+                                style={[styles.titleInput, { color: theme.text, borderColor: theme.border }]}
+                                value={recordTitle}
+                                onChangeText={setRecordTitle}
+                                placeholder="Enter title..."
+                                placeholderTextColor={theme.textLight}
+                                autoFocus
+                            />
+                            
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity onPress={() => setShowTitleModal(false)} style={styles.modalCancelButton}>
+                                    <ThemedText style={{ color: theme.textLight, fontWeight: 'bold' }}>Cancel</ThemedText>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={finalizeRecordingSave} style={[styles.modalSaveButton, { backgroundColor: theme.primary }]}>
+                                    <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Save</ThemedText>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
-                </View>
+                    </ThemedView>
+                </TouchableWithoutFeedback>
             </Modal>
         </ThemedView>
     );
@@ -438,11 +452,11 @@ const styles = StyleSheet.create({
     pauseResumeButton: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
     stopButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 15, flex: 0.35, justifyContent: 'center' },
 
-    // Modal Stilleri
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-    modalCard: { width: '85%', padding: 20, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.2, shadowRadius: 10, elevation: 10 },
-    titleInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 16, marginBottom: 20 },
+    // YENİDEN DÜZENLENEN OPAK MODAL STİLLERİ
+    modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+    modalCard: { width: '100%', padding: 25, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.1, shadowRadius: 15, elevation: 10 },
+    titleInput: { borderWidth: 1, borderRadius: 12, padding: 15, fontSize: 16, marginBottom: 25 },
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
-    modalCancelButton: { paddingVertical: 10, paddingHorizontal: 15, justifyContent: 'center' },
-    modalSaveButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10, justifyContent: 'center' }
+    modalCancelButton: { paddingVertical: 12, paddingHorizontal: 20, justifyContent: 'center' },
+    modalSaveButton: { paddingVertical: 12, paddingHorizontal: 25, borderRadius: 12, justifyContent: 'center' }
 });

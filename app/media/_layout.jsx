@@ -128,7 +128,7 @@ const MediaLayout = () => {
                             activeOpacity={0.7}
                             onPress={() => {
                                 // TODO: Değişiklikleri kaydet
-                                router.back();
+                                router.dismiss();
                             }}
                             style={{
                                 marginRight: 10,
