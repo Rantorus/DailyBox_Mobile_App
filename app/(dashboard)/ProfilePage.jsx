@@ -1,167 +1,343 @@
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import React from 'react';
-import ThemedView from '../../components/ThemedView';
-import ThemedText from '../../components/ThemedText';
-import ThemedBtn from '../../components/ThemedBtn';
-import ThemedCard from '../../components/ThemedCard';
-import Spacer from '../../components/Spacer';
+import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-
-import { useTheme } from '../../contexts/ThemeContext';
-import { Colors } from '../../constants/Colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-// 1. TEMALARI TANIMLIYORUZ (İkonları ve ID'leriyle birlikte)
+import ThemedView from '../../components/ThemedView';
+import ThemedText from '../../components/ThemedText';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Colors } from '../../constants/Colors';
+
+import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { dummyChapters } from "../../fetchChapters/dummyChapters";
+
+// Global Store'lar
+import { useMediaStore } from '../../store/mediaStore';
+import { useUserStore } from '../../store/useStore'; // USER STORE EKLENDİ
+
 const THEME_OPTIONS = [
-  { id: 'lightTheme', label: 'Light', icon: 'sunny' },
-  { id: 'darkTheme', label: 'Dark', icon: 'moon' },
+  { id: 'darkTheme', label: 'Dark Mode', icon: 'moon' },
+  { id: 'lightTheme', label: 'Light Mode', icon: 'sunny' },
+  { id: 'oceanTheme', label: 'Deep Ocean', icon: 'water' },
+  { id: 'forestTheme', label: 'Forest Green', icon: 'leaf' },
   { id: 'coffeeTheme', label: 'Coffee', icon: 'cafe' },
-  { id: 'oceanTheme', label: 'Ocean', icon: 'water' },
-  { id: 'forestTheme', label: 'Forest', icon: 'leaf' },
 ];
 
-const ProfilePage = () => {
+export default function ProfilePage() {
   const router = useRouter();
-  
-  // Aktif temayı öğren ve değiştirme fonksiyonunu al
   const { themeName, setThemeName } = useTheme();
-  // Sayfanın genel renkleri için aktif temayı çek
-  const activeTheme = Colors[themeName];
+  const theme = Colors[themeName];
+
+  // ==========================================
+  // ZUSTAND GLOBAL STORE BAĞLANTILARI
+  // ==========================================
+  const activeUser = useUserStore((state) => state.activeUser);
+  const logoutUser = useUserStore((state) => state.logoutUser);
+  
+  const locations = useMediaStore(state => state.locations) || [];
+
+  // ==========================================
+  // DİNAMİK VERİ HESAPLAMALARI
+  // ==========================================
+  // 1. Kullanıcı Bilgileri (Store'dan çekiliyor)
+  const activeUserName = activeUser?.name || activeUser?.fullName || "Bilinmeyen Kullanıcı";
+  const activeUserEmail = activeUser?.email || "E-posta bulunamadı";
+
+  // 2. Kutu ve Bölüm Sayıları
+  const boxesCount = dummyBoxes?.length || 0;
+  const chaptersCount = dummyChapters?.length || 0;
+
+  // 3. Kutu Tiplerine Göre Filtreleme
+  const logsCount = dummyBoxes?.filter(box => box.type === 'log').length || 0;
+  const plansCount = dummyBoxes?.filter(box => box.type === 'plan').length || 0;
+
+  // 4. Lokasyon Sayısı
+  const locationsCount = locations.length;
+
+  // ==========================================
+  // YARDIMCI BİLEŞENLER
+  // ==========================================
+  const SectionTitle = ({ title, icon }) => (
+    <View style={styles.sectionHeader}>
+      <Ionicons name={icon} size={18} color={theme.primary} style={{ marginRight: 8 }} />
+      <ThemedText style={[styles.sectionTitleText, { color: theme.textLight }]}>
+        {title}
+      </ThemedText>
+    </View>
+  );
+
+  const SettingItem = ({ icon, label, rightIcon, rightText, disabled }) => (
+    <TouchableOpacity 
+      style={[styles.settingItem, disabled && { opacity: 0.4 }]} 
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <View style={styles.settingLeft}>
+        <Ionicons name={icon} size={20} color={theme.text} style={{ marginRight: 12 }} />
+        <ThemedText style={{ fontSize: 15 }}>{label}</ThemedText>
+      </View>
+      <View style={styles.settingRight}>
+        {rightText && <ThemedText style={{ color: theme.textLight, fontSize: 13, marginRight: 5 }}>{rightText}</ThemedText>}
+        {rightIcon && <Ionicons name={rightIcon} size={18} color={theme.primary} />}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <ThemedView safe={true} style={styles.container}>
-      
-      <View style={styles.content}>
-        <ThemedText title={true} style={styles.headerText}>Profile</ThemedText>
-        <Spacer height={20} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
+        {/* --- 1. PROFİL BAŞLIĞI (DİNAMİK) --- */}
+        <View style={styles.profileHeader}>
+          <View style={[styles.avatarBox, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}>
+            <Ionicons name="person" size={40} color={theme.textLight} />
+          </View>
+          <View style={styles.profileInfo}>
+            <ThemedText style={{ fontSize: 20, fontWeight: 'bold' }}>{activeUserName}</ThemedText>
+            <ThemedText style={{ fontSize: 14, color: theme.textLight, marginTop: 4 }}>{activeUserEmail}</ThemedText>
+          </View>
+        </View>
 
-        {/* --- TEMA SEÇİM KARTI --- */}
-        <ThemedCard style={styles.themeCard}>
-          <ThemedText style={styles.sectionTitle}>App Theme</ThemedText>
-          <Spacer height={15} />
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-          <View style={styles.gridContainer}>
-            {THEME_OPTIONS.map((item) => {
-              const isSelected = themeName === item.id;
-              // Sadece önizleme için o temanın kendi paletini çekiyoruz!
-              const previewColor = Colors[item.id].primary; 
-              const previewBg = Colors[item.id].background;
+        {/* --- 2. YOUR DIGITAL FOOTPRINT --- */}
+        <SectionTitle title="YOUR DIGITAL FOOTPRINT" icon="stats-chart" />
+        <View style={[styles.footprintGrid, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}>
+          
+          <View style={styles.footprintRow}>
+            <View style={styles.footprintItem}>
+              <Ionicons name="cube" size={18} color="#D97757" />
+              <ThemedText style={styles.footprintText}>
+                <ThemedText style={{fontWeight: 'bold'}}>{boxesCount}</ThemedText> Boxes
+              </ThemedText>
+            </View>
+            <View style={styles.footprintItem}>
+              <Ionicons name="book" size={18} color="#4ADE80" />
+              <ThemedText style={styles.footprintText}>
+                <ThemedText style={{fontWeight: 'bold'}}>{chaptersCount}</ThemedText> Chapters
+              </ThemedText>
+            </View>
+          </View>
+          
+          <View style={styles.footprintRow}>
+            <View style={styles.footprintItem}>
+              <Ionicons name="document-text" size={18} color="#60A5FA" />
+              <ThemedText style={styles.footprintText}>
+                <ThemedText style={{fontWeight: 'bold'}}>{logsCount}</ThemedText> Logs
+              </ThemedText>
+            </View>
+            <View style={styles.footprintItem}>
+              <Ionicons name="calendar" size={18} color="#F472B6" />
+              <ThemedText style={styles.footprintText}>
+                <ThemedText style={{fontWeight: 'bold'}}>{plansCount}</ThemedText> Plans
+              </ThemedText>
+            </View>
+          </View>
 
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.themeButton,
-                    { backgroundColor: previewBg },
-                    isSelected && [styles.selectedThemeButton, { borderColor: previewColor }]
-                  ]}
-                  onPress={() => setThemeName(item.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.iconCircle, { backgroundColor: previewColor + '20' }]}>
-                    <Ionicons 
-                      name={isSelected ? item.icon : `${item.icon}-outline`} 
-                      size={24} 
-                      color={previewColor} 
-                    />
-                  </View>
-                  <ThemedText style={[styles.themeLabel, isSelected && { fontWeight: 'bold' }]}>
+          <View style={[styles.footprintRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+            <View style={styles.footprintItem}>
+              <Ionicons name="location" size={18} color="#A78BFA" />
+              <ThemedText style={styles.footprintText}>
+                <ThemedText style={{fontWeight: 'bold'}}>{locationsCount}</ThemedText> Locations
+              </ThemedText>
+            </View>
+          </View>
+
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+        {/* --- 3. ACCOUNT & SECURITY --- */}
+        <SectionTitle title="ACCOUNT & SECURITY" icon="shield-half" />
+        <View style={{ marginBottom: 20 }}>
+          <SettingItem icon="key" label="Change Password" rightIcon="chevron-forward" disabled={true} />
+          <SettingItem icon="scan" label="App Lock (FaceID / TouchID)" rightText="OFF" disabled={true} />
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+        {/* --- 4. APPEARANCE (TEMA) --- */}
+        <SectionTitle title="APPEARANCE" icon="color-palette" />
+        <View style={{ marginBottom: 20 }}>
+          {THEME_OPTIONS.map((item) => {
+            const itemTheme = Colors[item.id];
+            const isSelected = themeName === item.id;
+            
+            return (
+              <TouchableOpacity 
+                key={item.id}
+                style={[
+                  styles.themeOptionBtn, 
+                  isSelected && { backgroundColor: itemTheme.primary + '15', borderColor: itemTheme.primary }
+                ]}
+                onPress={() => setThemeName(item.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.themeOptionLeft}>
+                  <Ionicons name={item.icon} size={22} color={itemTheme.primary} style={{ marginRight: 12 }} />
+                  <ThemedText style={[
+                    { fontSize: 15 }, 
+                    isSelected && { fontWeight: 'bold', color: itemTheme.primary }
+                  ]}>
                     {item.label}
                   </ThemedText>
-                  
-                  {/* Seçiliyse minik bir tik ikonu */}
-                  {isSelected && (
-                    <View style={styles.checkBadge}>
-                      <Ionicons name="checkmark-circle" size={20} color={previewColor} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ThemedCard>
-      </View>
+                </View>
+                
+                {isSelected && (
+                  <Ionicons name="checkmark-circle" size={22} color={itemTheme.primary} />
+                )}
+              </TouchableOpacity>
+            )
+          })}
+        </View>
 
-      {/* --- ÇIKIŞ YAP BUTONU (En alta sabitlendi) --- */}
-      <View style={styles.footer}>
-        <ThemedBtn onPress={() => router.replace("/")} style={{ backgroundColor: '#EF4444' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="log-out-outline" size={20} color="white" />
-            <ThemedText style={{ color: "white", fontWeight: 'bold' }}>Logout</ThemedText>
-          </View>
-        </ThemedBtn>
-      </View>
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
+        {/* --- 5. DATA MANAGEMENT & ACCESS --- */}
+        <SectionTitle title="DATA MANAGEMENT & ACCESS" icon="save" />
+        <View style={{ marginBottom: 30 }}>
+          <SettingItem icon="document-text" label="Export All Data (ZIP/PDF)" rightIcon="chevron-forward" disabled={true} />
+        </View>
+
+        {/* --- 6. ALT AKSİYONLAR (LOGOUT & DELETE) --- */}
+        <View style={styles.footerActions}>
+          <TouchableOpacity 
+            style={styles.actionBtn} 
+            onPress={() => {
+              logoutUser(); // Çıkış yapıldığında store temizlenir
+              router.replace("/");
+            }}
+          >
+            <Ionicons name="log-out" size={20} color="#EF4444" />
+            <ThemedText style={{ color: "#EF4444", fontWeight: 'bold', marginLeft: 8 }}>Log Out</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionBtn, { opacity: 0.4 }]} 
+            disabled={true}
+          >
+            <Ionicons name="trash" size={20} color={theme.textLight} />
+            <ThemedText style={{ color: theme.textLight, fontWeight: 'bold', marginLeft: 8 }}>Delete Account</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+      </ScrollView>
     </ThemedView>
   );
-};
-
-export default ProfilePage;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 15,
-    paddingTop: 10,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
-  headerText: {
-    fontSize: 28,
-  },
-  themeCard: {
-    padding: 20,
-    borderRadius: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    opacity: 0.7,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  themeButton: {
-    width: '48%', // Yan yana iki tane sığması için
+  
+  profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    marginBottom: 20,
+  },
+  avatarBox: {
+    width: 70,
+    height: 70,
     borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selectedThemeButton: {
-    // Sınır rengi yukarıdaki dinamik inline style'dan geliyor
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 15,
   },
-  themeLabel: {
-    fontSize: 16,
+  profileInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  checkBadge: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
+
+  divider: {
+    height: 1,
+    width: '100%',
+    marginBottom: 20,
+    opacity: 0.5,
   },
-  footer: {
-    padding: 20,
-    paddingBottom: 30, // iPhone alt çentiği için güvenli alan
+
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitleText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+
+  footprintGrid: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+  },
+  footprintRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+  },
+  footprintItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    gap: 8,
+  },
+  footprintText: {
+    fontSize: 14,
+  },
+
+  settingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  themeOptionBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 6,
+  },
+  themeOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  footerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 10,
+    paddingTop: 20,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
   }
 });
