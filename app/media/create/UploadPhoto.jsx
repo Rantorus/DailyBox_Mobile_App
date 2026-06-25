@@ -17,11 +17,28 @@ export default function UploadPhoto() {
     const theme = Colors[themeName];
     const router = useRouter();
 
-    // SADECE EKLEME FONKSİYONUNU ALIYORUZ (Tüm listeyi çekmiyoruz)
+    // GLOBAL STORE 
     const addImage = useMediaStore(state => state.addImage);
+    const removeImage = useMediaStore(state => state.removeImage); // Silme fonksiyonu eklendi
 
-    // YEREL VİTRİN: Sadece bu sayfa açıkken yüklenenleri ekranda göstermek için
+    // YEREL VİTRİN
     const [localImages, setLocalImages] = useState([]);
+
+    // ==========================================
+    // SİLME İŞLEMİ (YEREL VE GLOBAL)
+    // ==========================================
+    const handleRemoveLocal = (id, uri) => {
+        // Hafızadan da silmek iyi bir temizliktir
+        try {
+            const file = new File(uri);
+            if (file.exists) file.delete();
+        } catch (e) {
+            console.error("Dosya silinemedi:", e);
+        }
+
+        removeImage(id); // 1. Global depodan sil
+        setLocalImages(prev => prev.filter(image => image.id !== id)); // 2. O anki ekrandan (vitrinden) sil
+    };
 
     // ==========================================
     // FOTOĞRAF İŞLEMLERİ
@@ -40,8 +57,8 @@ export default function UploadPhoto() {
                 date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
             };
 
-            addImage(newImage); // 1. GLOBAL DEPOYA GÖNDER (View ekranı için)
-            setLocalImages(prev => [...prev, newImage]); // 2. YEREL VİTRİNE EKLE (Sadece bu anlık ekran için)
+            addImage(newImage); // GLOBAL DEPOYA EKLE
+            setLocalImages(prev => [...prev, newImage]); // YEREL VİTRİNE EKLE
 
         } catch (error) {
             Alert.alert("Hata", "Fotoğraf kaydedilemedi.");
@@ -118,6 +135,15 @@ export default function UploadPhoto() {
                             renderItem={({ item }) => (
                                 <View style={[styles.imageWrapper, { borderColor: theme.border }]}>
                                     <Image source={{ uri: item.uri }} style={styles.image} />
+                                    
+                                    {/* SİLME BUTONU EKLENDİ */}
+                                    <TouchableOpacity
+                                        style={styles.deleteButton}
+                                        activeOpacity={0.8}
+                                        onPress={() => handleRemoveLocal(item.id, item.uri)}
+                                    >
+                                        <Ionicons name="trash-outline" size={16} color="#fff" />
+                                    </TouchableOpacity>
                                 </View>
                             )}
                         />
@@ -149,23 +175,6 @@ export default function UploadPhoto() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    headerButton: {
-        marginRight: 10,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    menuDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 20 },
-    tabContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingVertical: 15,
-        paddingHorizontal: 10,
-    },
-    tabItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     contentContainer: { flex: 1, padding: 15 },
     emptyState: { flex: 1, justifyContent: 'center', paddingHorizontal: 10 },
     dashedBox: {
@@ -176,6 +185,8 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         backgroundColor: 'transparent',
     },
+    
+    // Fotoğraf ve Silme Butonu Stilleri
     imageWrapper: {
         width: '47%',
         aspectRatio: 1,
@@ -188,6 +199,16 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%'
     },
+    deleteButton: {
+        position: 'absolute',
+        top: 7,
+        right: 7,
+        backgroundColor: 'rgba(239, 68, 68, 0.85)',
+        borderRadius: 14,
+        padding: 5,
+    },
+
+    // Alt Bar
     bottomBar: {
         flexDirection: 'row',
         justifyContent: 'space-around',

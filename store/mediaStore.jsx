@@ -19,4 +19,13 @@ export const useMediaStore = create((set) => ({
     removeAudio: (id) => set(state => ({
         audios: state.audios.filter(audio => audio.id !== id)
     })),
+
+    // BELGELER (DOCS)
+    docs: [],
+    addDoc: (newDoc) => set(state => ({
+        docs: [...state.docs, newDoc]
+    })),
+    removeDoc: (id) => set(state => ({
+        docs: state.docs.filter(doc => doc.id !== id)
+    })),
 }));
