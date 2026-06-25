@@ -268,7 +268,14 @@ const CreateBoxPage = () => {
                             <Spacer height={5} />
 
                             {/* --- LOCATION --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Location")}>
+                              <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                router.push({
+                                    pathname: "/location/UploadLocation",
+                                    params: {
+                                        
+                                    }
+                                });
+                            }}>
                                 <ThemedCard style={styles.noteCard}>
                                     <Ionicons name="location" size={24} color={theme.primary} />
                                     <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />

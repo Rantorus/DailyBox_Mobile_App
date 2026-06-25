@@ -28,4 +28,12 @@ export const useMediaStore = create((set) => ({
     removeDoc: (id) => set(state => ({
         docs: state.docs.filter(doc => doc.id !== id)
     })),
+
+    locations: [],
+    addLocation: (newLocation) => set(state => ({
+        locations: [...state.locations, newLocation]
+    })),
+    removeLocation: (id) => set(state => ({
+        locations: state.locations.filter(loc => loc.id !== id)
+    })),
 }));

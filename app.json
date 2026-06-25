@@ -22,7 +22,12 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.rantorus.DailyBox"
+      "package": "com.rantorus.DailyBox",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBKkVNYPFG2yEJxn5DbCSvPyfJ2N9t4GEk"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,6 +44,12 @@
         "expo-av",
         {
           "microphonePermission": "Uygulamanın ses kaydedebilmesi için mikrofona erişmesi gerekiyor."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Uygulamanın haritada yerinizi gösterebilmesi için konumunuza erişmesi gerekiyor."
         }
       ]
     ]

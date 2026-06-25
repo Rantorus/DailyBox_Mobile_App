@@ -166,17 +166,19 @@ const BoxDetail = () => {
             {boxData.hasLocation && (
                 <>
                     <Spacer height={5} />
-                    <ThemedCard style={styles.noteCard}>
-                        <Ionicons name="location" size={24} color={theme.primary} />
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`location/UploadLocation`)}>
+                        <ThemedCard style={styles.noteCard}>
+                            <Ionicons name="location" size={24} color={theme.primary} />
 
-                        <View
-                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
-                        />
+                            <View
+                                style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
+                            />
 
 
-                        <ThemedText style={{ alignSelf: "center" }} title={true}>Location</ThemedText>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>Location</ThemedText>
 
-                    </ThemedCard>
+                        </ThemedCard>
+                    </TouchableOpacity>
                 </>
             )}
 
@@ -184,17 +186,17 @@ const BoxDetail = () => {
                 <>
                     <Spacer height={5} />
                     <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`media/view/ViewPhoto`)}>
-                    <ThemedCard style={styles.noteCard}>
-                        <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
+                        <ThemedCard style={styles.noteCard}>
+                            <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
 
-                        <View
-                            style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
-                        />
+                            <View
+                                style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
+                            />
 
 
-                        <ThemedText style={{ alignSelf: "center" }} title={true}>Media</ThemedText>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>Media</ThemedText>
 
-                    </ThemedCard>
+                        </ThemedCard>
                     </TouchableOpacity>
                 </>
             )}
