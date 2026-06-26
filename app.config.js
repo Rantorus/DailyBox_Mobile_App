@@ -51,6 +51,12 @@ module.exports = {
         {
           "locationAlwaysAndWhenInUsePermission": "Uygulamanın haritada yerinizi gösterebilmesi için konumunuza erişmesi gerekiyor."
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Uygulamaya hızlı giriş için Face ID kullanmak istiyor."
+        }
       ]
     ]
   }

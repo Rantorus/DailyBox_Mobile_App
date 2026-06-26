@@ -1,10 +1,12 @@
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native'
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import ThemedView from '../components/ThemedView'
 import ThemedText from '../components/ThemedText'
 import ThemedInput from '../components/ThemedInput'
 import ThemedBtn from '../components/ThemedBtn.jsx'
 import Spacer from '../components/Spacer.jsx'
+
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Colors } from '../constants/Colors'
 import { useTheme } from '../contexts/ThemeContext.jsx'
@@ -14,6 +16,8 @@ import { dummyUsers } from '../fetchUser/userInfo.js'
 // 1. OLUŞTURDUĞUMUZ STORE'U İÇERİ AKTAR
 import { useUserStore } from '../store/useStore.jsx'
 
+import * as LocalAuthentication from 'expo-local-authentication';
+
 const index = () => {
     const router = useRouter();
     const { themeName } = useTheme();
@@ -21,6 +25,9 @@ const index = () => {
 
     // 2. STORE'DAN SET FONKSİYONUNU ÇEK
     const setActiveUser = useUserStore((state) => state.setActiveUser);
+
+    const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
+    const activeUser = useUserStore(state => state.activeUser);
 
     const [email, setEmail] = useState(dummyUsers[0].email)
     const [password, setPassword] = useState(dummyUsers[0].password)
@@ -36,6 +43,13 @@ const index = () => {
         }
     }, [error]);
 
+    // useEffect — sayfa açılınca kontrol et
+    useEffect(() => {
+        if (isBiometricEnabled && activeUser) {
+            handleBiometricLogin();
+        }
+    }, []);
+
     function handleLogin() {
         setIsLoading(true)
         setTimeout(() => {
@@ -46,8 +60,8 @@ const index = () => {
 
             if (matchedUser) {
                 // 3. EŞLEŞEN KULLANICIYI GLOBAL DEPOYA KAYDET
-                setActiveUser(matchedUser); 
-                
+                setActiveUser(matchedUser);
+
                 router.replace("CalendarPage");
             }
             else {
@@ -56,6 +70,19 @@ const index = () => {
             }
         }, 50)
     }
+
+    const handleBiometricLogin = async () => {
+        const result = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Parmak izi veya Face ID ile giriş yap',
+            cancelLabel: 'Şifre ile gir',
+            fallbackLabel: 'Şifre kullan',
+        });
+
+        if (result.success) {
+            router.replace('CalendarPage');
+        }
+        // Başarısız olursa normal login ekranı kalır
+    };
 
     if (isLoading) {
         return (
@@ -105,6 +132,18 @@ const index = () => {
                 <ThemedBtn onPress={() => handleLogin()}>
                     <ThemedText style={{ color: "white" }} title={true} >Login</ThemedText>
                 </ThemedBtn>
+
+                {isBiometricEnabled && (
+                    <TouchableOpacity
+                        onPress={handleBiometricLogin}
+                        style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                    >
+                        <Ionicons name="finger-print" size={24} color={theme.primary} />
+                        <ThemedText style={{ color: theme.primary, fontWeight: 'bold' }}>
+                            Parmak izi ile giriş yap
+                        </ThemedText>
+                    </TouchableOpacity>
+                )}
             </ThemedView>
         </TouchableWithoutFeedback>
     )

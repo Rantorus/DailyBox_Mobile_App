@@ -15,6 +15,8 @@ import { dummyChapters } from "../../fetchChapters/dummyChapters";
 import { useMediaStore } from '../../store/mediaStore';
 import { useUserStore } from '../../store/useStore'; // USER STORE EKLENDİ
 
+import * as LocalAuthentication from 'expo-local-authentication';
+
 const THEME_OPTIONS = [
   { id: 'darkTheme', label: 'Dark Mode', icon: 'moon' },
   { id: 'lightTheme', label: 'Light Mode', icon: 'sunny' },
@@ -33,8 +35,10 @@ export default function ProfilePage() {
   // ==========================================
   const activeUser = useUserStore((state) => state.activeUser);
   const logoutUser = useUserStore((state) => state.logoutUser);
-  
-  
+
+  // Store'dan çek
+  const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
+  const setBiometricEnabled = useUserStore(state => state.setBiometricEnabled);
 
   // ==========================================
   // DİNAMİK VERİ HESAPLAMALARI
@@ -51,7 +55,34 @@ export default function ProfilePage() {
   const logsCount = dummyBoxes?.filter(box => box.category === 'log').length || 0;
   const plansCount = dummyBoxes?.filter(box => box.category === 'plan').length || 0;
 
-  
+  // Toggle fonksiyonu
+  const handleBiometricToggle = async () => {
+    if (!isBiometricEnabled) {
+      // Açmadan önce cihazın destekleyip desteklemediğini kontrol et
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!compatible || !enrolled) {
+        Alert.alert(
+          'Desteklenmiyor',
+          'Cihazınızda kayıtlı parmak izi veya Face ID bulunamadı.'
+        );
+        return;
+      }
+
+      // Açmak için bir kere doğrulat
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Kimliğinizi doğrulayın',
+        cancelLabel: 'İptal',
+      });
+
+      if (result.success) {
+        setBiometricEnabled(true);
+      }
+    } else {
+      setBiometricEnabled(false);
+    }
+  };
 
   // ==========================================
   // YARDIMCI BİLEŞENLER
@@ -66,8 +97,8 @@ export default function ProfilePage() {
   );
 
   const SettingItem = ({ icon, label, rightIcon, rightText, disabled }) => (
-    <TouchableOpacity 
-      style={[styles.settingItem, disabled && { opacity: 0.4 }]} 
+    <TouchableOpacity
+      style={[styles.settingItem, disabled && { opacity: 0.4 }]}
       disabled={disabled}
       activeOpacity={0.7}
     >
@@ -85,7 +116,7 @@ export default function ProfilePage() {
   return (
     <ThemedView safe={true} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
+
         {/* --- 1. PROFİL BAŞLIĞI (DİNAMİK) --- */}
         <View style={styles.profileHeader}>
           <View style={[styles.avatarBox, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}>
@@ -102,33 +133,33 @@ export default function ProfilePage() {
         {/* --- 2. YOUR DIGITAL FOOTPRINT --- */}
         <SectionTitle title="YOUR DIGITAL FOOTPRINT" icon="stats-chart" />
         <View style={[styles.footprintGrid, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}>
-          
+
           <View style={styles.footprintRow}>
             <View style={styles.footprintItem}>
               <Ionicons name="cube" size={18} color="#D97757" />
               <ThemedText style={styles.footprintText}>
-                <ThemedText style={{fontWeight: 'bold'}}>{boxesCount}</ThemedText> Boxes
+                <ThemedText style={{ fontWeight: 'bold' }}>{boxesCount}</ThemedText> Boxes
               </ThemedText>
             </View>
             <View style={styles.footprintItem}>
               <Ionicons name="book" size={18} color="#4ADE80" />
               <ThemedText style={styles.footprintText}>
-                <ThemedText style={{fontWeight: 'bold'}}>{chaptersCount}</ThemedText> Chapters
+                <ThemedText style={{ fontWeight: 'bold' }}>{chaptersCount}</ThemedText> Chapters
               </ThemedText>
             </View>
           </View>
-          
+
           <View style={styles.footprintRow}>
             <View style={styles.footprintItem}>
               <Ionicons name="document-text" size={18} color="#60A5FA" />
               <ThemedText style={styles.footprintText}>
-                <ThemedText style={{fontWeight: 'bold'}}>{logsCount}</ThemedText> Logs
+                <ThemedText style={{ fontWeight: 'bold' }}>{logsCount}</ThemedText> Logs
               </ThemedText>
             </View>
             <View style={styles.footprintItem}>
               <Ionicons name="calendar" size={18} color="#F472B6" />
               <ThemedText style={styles.footprintText}>
-                <ThemedText style={{fontWeight: 'bold'}}>{plansCount}</ThemedText> Plans
+                <ThemedText style={{ fontWeight: 'bold' }}>{plansCount}</ThemedText> Plans
               </ThemedText>
             </View>
           </View>
@@ -141,7 +172,30 @@ export default function ProfilePage() {
         <SectionTitle title="ACCOUNT & SECURITY" icon="shield-half" />
         <View style={{ marginBottom: 20 }}>
           <SettingItem icon="key" label="Change Password" rightIcon="chevron-forward" disabled={true} />
-          <SettingItem icon="scan" label="App Lock (FaceID / TouchID)" rightText="OFF" disabled={true} />
+          
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={handleBiometricToggle}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="scan" size={20} color={theme.text} style={{ marginRight: 12 }} />
+              <ThemedText style={{ fontSize: 15 }}>App Lock (FaceID / TouchID)</ThemedText>
+            </View>
+            <View style={styles.settingRight}>
+              <ThemedText style={{
+                color: isBiometricEnabled ? theme.primary : theme.textLight,
+                fontSize: 13, marginRight: 5, fontWeight: 'bold'
+              }}>
+                {isBiometricEnabled ? 'ON' : 'OFF'}
+              </ThemedText>
+              <Ionicons
+                name={isBiometricEnabled ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={isBiometricEnabled ? theme.primary : theme.textLight}
+              />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -152,12 +206,12 @@ export default function ProfilePage() {
           {THEME_OPTIONS.map((item) => {
             const itemTheme = Colors[item.id];
             const isSelected = themeName === item.id;
-            
+
             return (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={item.id}
                 style={[
-                  styles.themeOptionBtn, 
+                  styles.themeOptionBtn,
                   isSelected && { backgroundColor: itemTheme.primary + '15', borderColor: itemTheme.primary }
                 ]}
                 onPress={() => setThemeName(item.id)}
@@ -166,13 +220,13 @@ export default function ProfilePage() {
                 <View style={styles.themeOptionLeft}>
                   <Ionicons name={item.icon} size={22} color={itemTheme.primary} style={{ marginRight: 12 }} />
                   <ThemedText style={[
-                    { fontSize: 15 }, 
+                    { fontSize: 15 },
                     isSelected && { fontWeight: 'bold', color: itemTheme.primary }
                   ]}>
                     {item.label}
                   </ThemedText>
                 </View>
-                
+
                 {isSelected && (
                   <Ionicons name="checkmark-circle" size={22} color={itemTheme.primary} />
                 )}
@@ -191,8 +245,8 @@ export default function ProfilePage() {
 
         {/* --- 6. ALT AKSİYONLAR (LOGOUT & DELETE) --- */}
         <View style={styles.footerActions}>
-          <TouchableOpacity 
-            style={styles.actionBtn} 
+          <TouchableOpacity
+            style={styles.actionBtn}
             onPress={() => {
               logoutUser(); // Çıkış yapıldığında store temizlenir
               router.replace("/");
@@ -202,8 +256,8 @@ export default function ProfilePage() {
             <ThemedText style={{ color: "#EF4444", fontWeight: 'bold', marginLeft: 8 }}>Log Out</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.actionBtn, { opacity: 0.4 }]} 
+          <TouchableOpacity
+            style={[styles.actionBtn, { opacity: 0.4 }]}
             disabled={true}
           >
             <Ionicons name="trash" size={20} color={theme.textLight} />
@@ -225,7 +279,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 40,
   },
-  
+
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',

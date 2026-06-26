@@ -9,4 +9,12 @@ export const useUserStore = create((set) => ({
   
   // Logout yapınca depoyu temizler
   logoutUser: () => set({ activeUser: null }),
+
+   // YENİ
+    isBiometricEnabled: false,
+    setBiometricEnabled: (value) => set({ isBiometricEnabled: value }),
+
+    setActiveUser: (user) => set({ activeUser: user }),
+    logoutUser: () => set({ activeUser: null }),
+    
 }));
