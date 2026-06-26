@@ -34,7 +34,7 @@ export default function ProfilePage() {
   const activeUser = useUserStore((state) => state.activeUser);
   const logoutUser = useUserStore((state) => state.logoutUser);
   
-  const locations = useMediaStore(state => state.locations) || [];
+  
 
   // ==========================================
   // DİNAMİK VERİ HESAPLAMALARI
@@ -48,11 +48,10 @@ export default function ProfilePage() {
   const chaptersCount = dummyChapters?.length || 0;
 
   // 3. Kutu Tiplerine Göre Filtreleme
-  const logsCount = dummyBoxes?.filter(box => box.type === 'log').length || 0;
-  const plansCount = dummyBoxes?.filter(box => box.type === 'plan').length || 0;
+  const logsCount = dummyBoxes?.filter(box => box.category === 'log').length || 0;
+  const plansCount = dummyBoxes?.filter(box => box.category === 'plan').length || 0;
 
-  // 4. Lokasyon Sayısı
-  const locationsCount = locations.length;
+  
 
   // ==========================================
   // YARDIMCI BİLEŞENLER
@@ -130,15 +129,6 @@ export default function ProfilePage() {
               <Ionicons name="calendar" size={18} color="#F472B6" />
               <ThemedText style={styles.footprintText}>
                 <ThemedText style={{fontWeight: 'bold'}}>{plansCount}</ThemedText> Plans
-              </ThemedText>
-            </View>
-          </View>
-
-          <View style={[styles.footprintRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-            <View style={styles.footprintItem}>
-              <Ionicons name="location" size={18} color="#A78BFA" />
-              <ThemedText style={styles.footprintText}>
-                <ThemedText style={{fontWeight: 'bold'}}>{locationsCount}</ThemedText> Locations
               </ThemedText>
             </View>
           </View>
