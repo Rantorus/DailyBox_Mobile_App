@@ -1,7 +1,8 @@
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, TouchableOpacity, View, ScrollView, Image, Modal, Alert, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as ImagePicker from 'expo-image-picker';
 
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -13,9 +14,11 @@ import { dummyChapters } from "../../fetchChapters/dummyChapters";
 
 // Global Store'lar
 import { useMediaStore } from '../../store/mediaStore';
-import { useUserStore } from '../../store/useStore'; // USER STORE EKLENDİ
+import { useUserStore } from '../../store/useStore'; 
 
 import * as LocalAuthentication from 'expo-local-authentication';
+
+const { width } = Dimensions.get('window');
 
 const THEME_OPTIONS = [
   { id: 'darkTheme', label: 'Dark Mode', icon: 'moon' },
@@ -36,41 +39,40 @@ export default function ProfilePage() {
   const activeUser = useUserStore((state) => state.activeUser);
   const logoutUser = useUserStore((state) => state.logoutUser);
 
-  // Store'dan çek
   const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
   const setBiometricEnabled = useUserStore(state => state.setBiometricEnabled);
 
   // ==========================================
+  // PROFİL FOTOĞRAFI STATE'LERİ
+  // ==========================================
+  // İleride bu veriyi Zustand store'da (activeUser.profilePic vb.) tutabilirsin
+  const [profileImage, setProfileImage] = useState(null); 
+  const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
+
+  // ==========================================
   // DİNAMİK VERİ HESAPLAMALARI
   // ==========================================
-  // 1. Kullanıcı Bilgileri (Store'dan çekiliyor)
   const activeUserName = activeUser?.name || activeUser?.fullName || "Bilinmeyen Kullanıcı";
   const activeUserEmail = activeUser?.email || "E-posta bulunamadı";
 
-  // 2. Kutu ve Bölüm Sayıları
   const boxesCount = dummyBoxes?.length || 0;
   const chaptersCount = dummyChapters?.length || 0;
-
-  // 3. Kutu Tiplerine Göre Filtreleme
   const logsCount = dummyBoxes?.filter(box => box.category === 'log').length || 0;
   const plansCount = dummyBoxes?.filter(box => box.category === 'plan').length || 0;
 
-  // Toggle fonksiyonu
+  // ==========================================
+  // FONKSİYONLAR
+  // ==========================================
   const handleBiometricToggle = async () => {
     if (!isBiometricEnabled) {
-      // Açmadan önce cihazın destekleyip desteklemediğini kontrol et
       const compatible = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!compatible || !enrolled) {
-        Alert.alert(
-          'Desteklenmiyor',
-          'Cihazınızda kayıtlı parmak izi veya Face ID bulunamadı.'
-        );
+        Alert.alert('Desteklenmiyor', 'Cihazınızda kayıtlı parmak izi veya Face ID bulunamadı.');
         return;
       }
 
-      // Açmak için bir kere doğrulat
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Kimliğinizi doğrulayın',
         cancelLabel: 'İptal',
@@ -81,6 +83,61 @@ export default function ProfilePage() {
       }
     } else {
       setBiometricEnabled(false);
+    }
+  };
+
+  // FOTOĞRAF SEÇME VEYA ÇEKME İŞLEMİ
+  const pickImage = async (useCamera = false) => {
+    let result;
+    
+    if (useCamera) {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('İzin Gerekli', 'Kamera izni vermeniz gerekiyor.');
+        return;
+      }
+      result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1], // Kare formatta kes
+        quality: 0.5,
+      });
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('İzin Gerekli', 'Galeri izni vermeniz gerekiyor.');
+        return;
+      }
+      result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+    }
+
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+    }
+  };
+
+  // KAMERA VE GALERİ SEÇENEKLERİNİ SUNAN ALERT
+  const showImageOptions = () => {
+    Alert.alert(
+      "Profil Fotoğrafı",
+      "Fotoğraf eklemek için bir yöntem seçin",
+      [
+        { text: "Kamera", onPress: () => pickImage(true) },
+        { text: "Galeri", onPress: () => pickImage(false) },
+        { text: "İptal", style: "cancel" }
+      ]
+    );
+  };
+
+  // AVATARA TIKLANDIĞINDA NE OLACAK?
+  const handleAvatarPress = () => {
+    if (profileImage) {
+      setIsPhotoModalVisible(true); // Foto varsa büyük modülü aç
+    } else {
+      showImageOptions(); // Foto yoksa doğrudan seçenekleri sun
     }
   };
 
@@ -119,9 +176,24 @@ export default function ProfilePage() {
 
         {/* --- 1. PROFİL BAŞLIĞI (DİNAMİK) --- */}
         <View style={styles.profileHeader}>
-          <View style={[styles.avatarBox, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}>
-            <Ionicons name="person" size={40} color={theme.textLight} />
-          </View>
+          {/* Avatar'ı TouchableOpacity ile sarmaladık */}
+          <TouchableOpacity 
+            onPress={handleAvatarPress} 
+            activeOpacity={0.8}
+            style={[styles.avatarBox, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}
+          >
+            {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+            ) : (
+                <Ionicons name="person" size={40} color={theme.textLight} />
+            )}
+            
+            {/* Küçük düzenleme ikonu (Kullanıcıya buraya tıklanabildiğini hissettirir) */}
+            <View style={[styles.editBadge, { backgroundColor: theme.primary }]}>
+                <Ionicons name="camera" size={12} color="#fff" />
+            </View>
+          </TouchableOpacity>
+
           <View style={styles.profileInfo}>
             <ThemedText style={{ fontSize: 20, fontWeight: 'bold' }}>{activeUserName}</ThemedText>
             <ThemedText style={{ fontSize: 14, color: theme.textLight, marginTop: 4 }}>{activeUserEmail}</ThemedText>
@@ -133,7 +205,6 @@ export default function ProfilePage() {
         {/* --- 2. YOUR DIGITAL FOOTPRINT --- */}
         <SectionTitle title="YOUR DIGITAL FOOTPRINT" icon="stats-chart" />
         <View style={[styles.footprintGrid, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}>
-
           <View style={styles.footprintRow}>
             <View style={styles.footprintItem}>
               <Ionicons name="cube" size={18} color="#D97757" />
@@ -148,7 +219,6 @@ export default function ProfilePage() {
               </ThemedText>
             </View>
           </View>
-
           <View style={styles.footprintRow}>
             <View style={styles.footprintItem}>
               <Ionicons name="document-text" size={18} color="#60A5FA" />
@@ -163,7 +233,6 @@ export default function ProfilePage() {
               </ThemedText>
             </View>
           </View>
-
         </View>
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -248,7 +317,7 @@ export default function ProfilePage() {
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => {
-              logoutUser(); // Çıkış yapıldığında store temizlenir
+              logoutUser(); 
               router.replace("/");
             }}
           >
@@ -256,132 +325,133 @@ export default function ProfilePage() {
             <ThemedText style={{ color: "#EF4444", fontWeight: 'bold', marginLeft: 8 }}>Log Out</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionBtn, { opacity: 0.4 }]}
-            disabled={true}
-          >
+          <TouchableOpacity style={[styles.actionBtn, { opacity: 0.4 }]} disabled={true}>
             <Ionicons name="trash" size={20} color={theme.textLight} />
             <ThemedText style={{ color: theme.textLight, fontWeight: 'bold', marginLeft: 8 }}>Delete Account</ThemedText>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
+
+      {/* ==========================================
+          TAM EKRAN FOTOĞRAF MODALI 
+      ========================================== */}
+      <Modal visible={isPhotoModalVisible} transparent={true} animationType="fade">
+          <View style={styles.modalBackground}>
+              <TouchableOpacity 
+                style={styles.modalCloseButton} 
+                onPress={() => setIsPhotoModalVisible(false)}
+              >
+                  <Ionicons name="close" size={32} color="#FFF" />
+              </TouchableOpacity>
+
+              {profileImage && (
+                  <Image source={{ uri: profileImage }} style={styles.fullScreenImage} resizeMode="contain" />
+              )}
+
+              <TouchableOpacity 
+                style={[styles.changePhotoBtn, { backgroundColor: theme.primary }]} 
+                onPress={showImageOptions}
+              >
+                  <Ionicons name="camera-reverse" size={20} color="#FFF" />
+                  <ThemedText style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 8 }}>
+                    Change Photo
+                  </ThemedText>
+              </TouchableOpacity>
+          </View>
+      </Modal>
+
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
+  container: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
 
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  avatarBox: {
-    width: 70,
-    height: 70,
-    borderWidth: 2,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+  profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  
+  // Avatar Stilleri
+  avatarBox: { 
+    width: 76, 
+    height: 76, 
+    borderWidth: 2, 
+    borderRadius: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
     marginRight: 15,
+    position: 'relative', // Badge için gerekli
+    overflow: 'hidden'
   },
-  profileInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-
-  divider: {
-    height: 1,
+  avatarImage: {
     width: '100%',
-    marginBottom: 20,
-    opacity: 0.5,
+    height: '100%',
+    borderRadius: 18, // Kutunun içini tam kaplaması için biraz kavisli
   },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitleText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-
-  footprintGrid: {
-    borderWidth: 1,
+  editBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 24,
+    height: 24,
     borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-  },
-  footprintRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: 12,
-    marginBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
-  },
-  footprintItem: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    width: '48%',
-    gap: 8,
+    borderWidth: 2,
+    borderColor: '#FFF', // Etrafında keskin hat
   },
-  footprintText: {
-    fontSize: 14,
-  },
+  
+  profileInfo: { flex: 1, justifyContent: 'center' },
+  divider: { height: 1, width: '100%', marginBottom: 20, opacity: 0.5 },
 
-  settingItem: {
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  sectionTitleText: { fontSize: 13, fontWeight: 'bold', letterSpacing: 1 },
+
+  footprintGrid: { borderWidth: 1, borderRadius: 12, padding: 15, marginBottom: 20 },
+  footprintRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 12, marginBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(150, 150, 150, 0.2)' },
+  footprintItem: { flexDirection: 'row', alignItems: 'center', width: '48%', gap: 8 },
+  footprintText: { fontSize: 14 },
+
+  settingItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 },
+  settingLeft: { flexDirection: 'row', alignItems: 'center' },
+  settingRight: { flexDirection: 'row', alignItems: 'center' },
+
+  themeOptionBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 15, borderRadius: 12, borderWidth: 1, borderColor: 'transparent', marginBottom: 6 },
+  themeOptionLeft: { flexDirection: 'row', alignItems: 'center' },
+
+  footerActions: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 10, paddingTop: 20 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 15 },
+
+  // Tam Ekran Modal Stilleri
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Derin siyah arka plan
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 25,
+    zIndex: 10,
+    padding: 10,
+  },
+  fullScreenImage: {
+    width: width,
+    height: width, // Kare formatı korumak için 
+  },
+  changePhotoBtn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 14,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  themeOptionBtn: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    marginBottom: 6,
-  },
-  themeOptionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  footerActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 10,
-    paddingTop: 20,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    position: 'absolute',
+    bottom: 50,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   }
 });

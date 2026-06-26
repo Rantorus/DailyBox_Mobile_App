@@ -1,5 +1,5 @@
 import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import React, { useState,useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Colors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemedView from '../../components/ThemedView';
@@ -60,14 +60,14 @@ const BoxesPage = () => {
         const categoryMatch = shownCategory
           ? data.category.toLowerCase() === 'log'
           : data.category.toLowerCase() === 'plan';
-          
+
         // GERÇEK FAVORİ FİLTRESİ
-        const favoriteMatch = showFavoritesOnly 
-          ? data.isFavorite === true 
+        const favoriteMatch = showFavoritesOnly
+          ? data.isFavorite === true
           : true;
 
-          const typeMatch = selectedTypes.length > 0 
-          ? selectedTypes.includes(data.type) 
+        const typeMatch = selectedTypes.length > 0
+          ? selectedTypes.includes(data.type)
           : true;
 
         return categoryMatch && favoriteMatch && typeMatch;
@@ -81,7 +81,7 @@ const BoxesPage = () => {
           default: return 0;
         }
       });
-  }, [shownCategory, sortBy,showFavoritesOnly,selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+  }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
 
   // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
   const { query, setQuery, results, loading } = useSearch(filteredData);
@@ -89,31 +89,31 @@ const BoxesPage = () => {
   // 5. ÖNİZLEME SAYACI (Filtre Paneli İçin)
   const previewCount = dummyBoxes.filter((item) => {
     // 1. Temel Filtre: Log mu Plan mı?
-    const categoryMatch = shownCategory 
-      ? item.category.toLowerCase() === 'log' 
+    const categoryMatch = shownCategory
+      ? item.category.toLowerCase() === 'log'
       : item.category.toLowerCase() === 'plan';
-    
+
     // 2. Arama Filtresi: Arama çubuğundaki yazıyı HEM BAŞLIKTA HEM AÇIKLAMADA ara!
-    const searchMatch = query 
-      ? item.title.toLowerCase().includes(query.toLowerCase()) || 
-        item.description.toLowerCase().includes(query.toLowerCase())
+    const searchMatch = query
+      ? item.title.toLowerCase().includes(query.toLowerCase()) ||
+      item.description.toLowerCase().includes(query.toLowerCase())
       : true;
 
-      // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)
-    const favoriteMatch = tempShowFavoritesOnly 
-      ? item.isFavorite === true 
+    // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)
+    const favoriteMatch = tempShowFavoritesOnly
+      ? item.isFavorite === true
       : true;
 
-      const typeMatch = tempSelectedTypes.length > 0 
-      ? tempSelectedTypes.includes(item.type) 
+    const typeMatch = tempSelectedTypes.length > 0
+      ? tempSelectedTypes.includes(item.type)
       : true;
 
     // (İleride buraya Seçilen Kategoriler ve Favoriler gibi filtreleri de ekleyeceğiz)
 
-    return categoryMatch && searchMatch && favoriteMatch && typeMatch; 
+    return categoryMatch && searchMatch && favoriteMatch && typeMatch;
   }).length;
 
-  
+
 
   return (
 
@@ -136,7 +136,7 @@ const BoxesPage = () => {
               setIsFilterVisible(true);
               setTempShowFavoritesOnly(showFavoritesOnly);
               setTempSelectedTypes(selectedTypes);
-            } }
+            }}
           >
             <Ionicons name="filter-circle" size={28} color={theme.textLight} />
           </TouchableOpacity>
@@ -186,7 +186,11 @@ const BoxesPage = () => {
                 <ThemedText >{item.description}</ThemedText>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText>{item.date.split('T')[0]}</ThemedText>
+                  <ThemedText>
+                    {/* 2026-06-18 -> 18-06-2026 dönüşümü */}
+                    {item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}
+                  </ThemedText>
+
                   {item.isFavorite ? (
                     <Ionicons name="star" size={24} color={theme.primary} />
                   ) : (
@@ -224,7 +228,7 @@ const BoxesPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                
+
                 setIsCreateCardVisible(false);
                 router.push({
                   pathname: "/box/CreateBoxPage",
@@ -244,7 +248,7 @@ const BoxesPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-                
+
                 setIsCreateCardVisible(false);
                 router.push({
                   pathname: "/box/CreateBoxPage",
@@ -331,43 +335,43 @@ const BoxesPage = () => {
             </View>
 
             {/* --- TYPES CHECKBOX BÖLÜMÜ --- */}
-              <Spacer height={25} />
-              <ThemedText title={true}>TYPES</ThemedText>
-              <Spacer height={10} />
+            <Spacer height={25} />
+            <ThemedText title={true}>TYPES</ThemedText>
+            <Spacer height={10} />
 
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingLeft: 5 }}>
-                {availableTypes.map((type, index) => (
-                  <TouchableOpacity 
-                    key={index}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '45%' }} // width 45% ile yan yana iki kolon yapar
-                    onPress={() => toggleTempType(type)}
-                  >
-                    <Ionicons 
-                      name={tempSelectedTypes.includes(type) ? "checkbox" : "square-outline"} 
-                      size={24} 
-                      color={theme.primary} 
-                    />
-                    <ThemedText title={true} style={{ fontSize: 16 }}>{type}</ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingLeft: 5 }}>
+              {availableTypes.map((type, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '45%' }} // width 45% ile yan yana iki kolon yapar
+                  onPress={() => toggleTempType(type)}
+                >
+                  <Ionicons
+                    name={tempSelectedTypes.includes(type) ? "checkbox" : "square-outline"}
+                    size={24}
+                    color={theme.primary}
+                  />
+                  <ThemedText title={true} style={{ fontSize: 16 }}>{type}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* --- FAVORİLER CHECKBOX BÖLÜMÜ --- */}
-              <Spacer height={25} />
-              <ThemedText title={true}>STATUS</ThemedText>
-              <Spacer height={10} />
-              
-              <TouchableOpacity 
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 5 }} 
-                onPress={() => setTempShowFavoritesOnly(!tempShowFavoritesOnly)}
-              >
-                <Ionicons 
-                  name={tempShowFavoritesOnly ? "checkbox" : "square-outline"} 
-                  size={24} 
-                  color={theme.primary} 
-                />
-                <ThemedText title={true} style={{ fontSize: 16 }}>Favorites Only</ThemedText>
-              </TouchableOpacity>
+            <Spacer height={25} />
+            <ThemedText title={true}>STATUS</ThemedText>
+            <Spacer height={10} />
+
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 5 }}
+              onPress={() => setTempShowFavoritesOnly(!tempShowFavoritesOnly)}
+            >
+              <Ionicons
+                name={tempShowFavoritesOnly ? "checkbox" : "square-outline"}
+                size={24}
+                color={theme.primary}
+              />
+              <ThemedText title={true} style={{ fontSize: 16 }}>Favorites Only</ThemedText>
+            </TouchableOpacity>
 
 
 
@@ -378,8 +382,8 @@ const BoxesPage = () => {
                 setSortBy(tempSortBy);
                 setShowFavoritesOnly(tempShowFavoritesOnly);
                 setSelectedTypes(tempSelectedTypes);
-              }} 
-              style={[styles.filterButton, { backgroundColor: theme.primary }]}>
+              }}
+                style={[styles.filterButton, { backgroundColor: theme.primary }]}>
                 <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>SHOW RESULTS ({previewCount})</ThemedText>
               </TouchableOpacity>
 

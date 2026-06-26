@@ -86,7 +86,12 @@ const BoxDetail = () => {
                 <Spacer height={25} />
                 <View style={styles.typeDateBar}>
                     <ThemedText>Type: {boxData.type}</ThemedText>
-                    <ThemedText>Date: {boxData.date.split('T')[0]}</ThemedText>
+
+                    {/* 2026-06-18 -> 18-06-2026 dönüşümü */}
+                    <ThemedText>
+                        Date: {boxData.date ? boxData.date.split('T')[0].split('-').reverse().join('-') : ''}
+                    </ThemedText>
+
                     <ThemedText>Category: {boxData.category}</ThemedText>
                 </View>
                 <Spacer height={25} />

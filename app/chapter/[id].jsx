@@ -97,7 +97,7 @@ const ChapterDetail = () => {
                 <Spacer height={25} />
                 <View style={styles.typeDateBar}>
                     <ThemedText>Type: {chapterData.type}</ThemedText>
-                    <ThemedText>Date: {chapterData.date.split('T')[0]}</ThemedText>
+                    <ThemedText>Date: {chapterData.date ? chapterData.date.split('T')[0].split('-').reverse().join('-') : ''}</ThemedText>
                 </View>
                 <Spacer height={25} />
                 <ThemedText style={styles.descriptionText}>Description: {chapterData.description}</ThemedText>
@@ -126,7 +126,7 @@ const ChapterDetail = () => {
               <ThemedText style={styles.title}>{item.title}</ThemedText>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText>{item.date.split('T')[0]}</ThemedText>
+                  <ThemedText>{item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}</ThemedText>
                   {item.isFavorite ? (
                     <Ionicons name="star" size={24} color={theme.primary} />
                   ) : (

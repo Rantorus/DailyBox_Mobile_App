@@ -148,19 +148,22 @@ const ChaptersPage = () => {
               <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText style={{fontSize:15}}  title={true} >{item.title}</ThemedText>
-                  <ThemedText style={{fontSize:15}} >{item.type}</ThemedText>
+                  <ThemedText style={{ fontSize: 15 }} title={true} >{item.title}</ThemedText>
+                  <ThemedText style={{ fontSize: 15 }} >{item.type}</ThemedText>
                 </View>
 
-                <ThemedText style={{fontSize:15}} >{item.description}</ThemedText>
+                <ThemedText style={{ fontSize: 15 }} >{item.description}</ThemedText>
 
-                <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-                  <ThemedText style={{fontSize:15}} >{item.date.split('T')[0]}</ThemedText>
-                  <ThemedText style={{fontSize:15}} >( {item.boxIds.length} boxes )</ThemedText>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <ThemedText>
+                    {/* 2026-06-18 -> 18-06-2026 dönüşümü */}
+                    {item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}
+                  </ThemedText>
+
                   {item.isFavorite ? (
-                    <Ionicons style={{alignSelf:"center"}} name="star" size={25} color={theme.primary} />
+                    <Ionicons name="star" size={24} color={theme.primary} />
                   ) : (
-                    <Ionicons style={{alignSelf:"center"}} name="star-outline" size={25} color={theme.border} />
+                    <Ionicons name="star-outline" size={24} color={theme.border} />
                   )}
                 </View>
 
@@ -198,7 +201,7 @@ const ChaptersPage = () => {
 
                   }
                 });
-                
+
               }}
             >
               <Ionicons name="document-text" size={20} color={theme.primary} />
@@ -206,7 +209,7 @@ const ChaptersPage = () => {
               <ThemedText style={[styles.menuText, { color: theme.text }]}>Create Chapter</ThemedText>
 
             </TouchableOpacity>
-            
+
 
 
           </ThemedCard>
@@ -401,7 +404,7 @@ const styles = StyleSheet.create({
   card: {
     width: "92%",
     height: 185,
-    justifyContent:"space-between",
+    justifyContent: "space-between",
     marginHorizontal: 15,
     marginVertical: 8,
     padding: 12,

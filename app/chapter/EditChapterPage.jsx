@@ -89,11 +89,7 @@ const CreateChapterPage = () => {
     }, [selectedBoxes]);
 
     function handleSave() {
-        if (title.trim() && description.trim() && type.trim()) {
-            console.log("Saved Data: ", { title, description, type, isFavorite, selectedBoxes });
-        } else {
-            console.log("bos deger var");
-        }
+       router.back();
     }
 
     const handleRemoveBox = (boxIdToRemove) => {

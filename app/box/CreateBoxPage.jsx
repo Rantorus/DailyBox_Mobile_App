@@ -48,6 +48,19 @@ const CreateBoxPage = () => {
         }
     }
 
+    const formatInputDate = (val) => {
+        if (!val) return '';
+        const cleanDate = val.split('T')[0]; // Varsa saat kısmını (T00:00:00) çöpe at
+
+        // Eğer format YYYY-MM-DD ise (yani ilk parça 4 haneli yıl ise) ters çevir
+        if (cleanDate.includes('-') && cleanDate.split('-')[0].length === 4) {
+            return cleanDate.split('-').reverse().join('-');
+        }
+
+        // Zaten 18-06-2026 formatındaysa veya kullanıcı elle yazıyorsa hiç dokunma
+        return cleanDate;
+    };
+
     return (
         // 3. KLAVYE GİZLEME DÜZELTİLDİ: Tüm sayfayı sarmaladık ki boşluğa basınca klavye kapansın
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -107,13 +120,12 @@ const CreateBoxPage = () => {
                 <ThemedInput
                     style={[
                         { width: "85%", marginBottom: 10 },
-                        date && { opacity: 0.5 } // date varsa HEM kutuyu HEM yazıyı komple soluklaştır
                     ]}
                     placeholder="Date"
                     placeholderTextColor={theme.textLight}
                     onChangeText={setDateValue}
-                    value={date ? date : dateValue}
-                    editable={!date}
+                    // Değeri doğrudan fonksiyondan geçirerek ekrana basıyoruz
+                    value={formatInputDate(date ? date : dateValue)}
                 />
 
 
@@ -230,7 +242,7 @@ const CreateBoxPage = () => {
                                 router.push({
                                     pathname: "/note/CreateNotePage",
                                     params: {
-                                        
+
                                     }
                                 });
                             }}>
@@ -251,7 +263,7 @@ const CreateBoxPage = () => {
                                 router.push({
                                     pathname: "/todo/CreateTodo",
                                     params: {
-                                        
+
                                     }
                                 });
                             }}>
@@ -268,11 +280,11 @@ const CreateBoxPage = () => {
                             <Spacer height={5} />
 
                             {/* --- LOCATION --- */}
-                              <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
                                 router.push({
                                     pathname: "/location/UploadLocation",
                                     params: {
-                                        
+
                                     }
                                 });
                             }}>
@@ -293,7 +305,7 @@ const CreateBoxPage = () => {
                                 router.push({
                                     pathname: "/media/create/UploadPhoto",
                                     params: {
-                                        
+
                                     }
                                 });
                             }}>

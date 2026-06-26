@@ -44,7 +44,19 @@ const EditBoxPage = () => {
 
     const router = useRouter();
 
+    // Gelen tarihi güvenli bir şekilde DD-MM-YYYY formatına çevirir
+    const formatInputDate = (val) => {
+        if (!val) return '';
+        const cleanDate = val.split('T')[0]; // Varsa saat kısmını (T00:00:00) çöpe at
 
+        // Eğer format YYYY-MM-DD ise (yani ilk parça 4 haneli yıl ise) ters çevir
+        if (cleanDate.includes('-') && cleanDate.split('-')[0].length === 4) {
+            return cleanDate.split('-').reverse().join('-');
+        }
+
+        // Zaten 18-06-2026 formatındaysa veya kullanıcı elle yazıyorsa hiç dokunma
+        return cleanDate;
+    };
 
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
     const availableTypes = useMemo(() => {
@@ -53,7 +65,7 @@ const EditBoxPage = () => {
     }, []);
 
     function handleSave() {
-
+        router.back();
     }
 
     return (
@@ -111,13 +123,14 @@ const EditBoxPage = () => {
                 />
 
                 <ThemedInput
-                    style={
-                        { width: "85%", marginBottom: 10 }
-                    }
+                    style={[
+                        { width: "85%", marginBottom: 10 },
+                    ]}
                     placeholder="Date"
                     placeholderTextColor={theme.textLight}
                     onChangeText={setDateValue}
-                    value={dateValue}
+                    // "date" değişkenini sildik, sadece kendi state'ini (dateValue) formata sokuyoruz
+                    value={formatInputDate(dateValue)}
                 />
 
 

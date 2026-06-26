@@ -6,7 +6,6 @@ import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
 
-
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
@@ -34,10 +33,24 @@ const CalendarPage = () => {
     return item.date.split('T')[0] === selectedDate;
   });
 
-  const [year, month, day] = selectedDate.split('-');
-  const dateObj = new Date(year, month - 1, day);
-  const daysInEnglish = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayName = daysInEnglish[dateObj.getDay()];
+  // ==========================================
+  // TARİH FORMATLAMA (AVRUPA STANDARDI: Gün-Ay-Yıl)
+  // ==========================================
+  const formatDisplayDate = (dateString) => {
+    // "2026-06-26" stringini parçala ve Date objesi oluştur
+    const [year, month, day] = dateString.split('-');
+    const dateObj = new Date(year, month - 1, day);
+
+    // en-GB formatı: "Friday, 26 June 2026" çıktısı verir.
+    return dateObj.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formattedSelectedDate = formatDisplayDate(selectedDate);
 
   function generateMarkedDates() {
     let marks = {};
@@ -138,6 +151,8 @@ const CalendarPage = () => {
             key={`${calKey}-${themeName}`}
             current={calendarCurrent}
             onDayPress={(day) => setSelectedDate(day.dateString)}
+            // 1. TAKVİMİ PAZARTESİDEN (Monday) BAŞLAT (Avrupa/Türkiye Standardı)
+            firstDay={1} 
             renderHeader={(date) => {
               const y = typeof date.getFullYear === 'function' ? date.getFullYear() : date.year;
               const mIndex = typeof date.getMonth === 'function' ? date.getMonth() : (date.month - 1);
@@ -179,8 +194,9 @@ const CalendarPage = () => {
         )}
       </View>
 
+      {/* 2. AVRUPA FORMATINDAKİ BAŞLIK ("Friday, 26 June 2026") */}
       <ThemedText title={true} style={styles.dateTitle}>
-        {dayName}, {selectedDate}
+        {formattedSelectedDate}
       </ThemedText>
 
       <FlatList
@@ -194,13 +210,14 @@ const CalendarPage = () => {
               <ThemedText style={styles.title}>{item.title}</ThemedText>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText>{item.date.split('T')[0]}</ThemedText>
-                  {item.isFavorite ? (
-                    <Ionicons name="star" size={24} color={theme.primary} />
-                  ) : (
-                    <Ionicons name="star-outline" size={24} color={theme.border} />
-                  )}
-                </View>
+                {/* Listelenen kutuların tarih formatını güncelleyebilirsin, ancak orijinal veri split ile alındığı için böyle kaldı */}
+                <ThemedText>{formatDisplayDate(item.date.split('T')[0])}</ThemedText>
+                {item.isFavorite ? (
+                  <Ionicons name="star" size={24} color={theme.primary} />
+                ) : (
+                  <Ionicons name="star-outline" size={24} color={theme.border} />
+                )}
+              </View>
 
               <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
             </ThemedCard>
@@ -230,7 +247,6 @@ const CalendarPage = () => {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
-
                 setIsCreateCardVisible(false);
                 router.push({
                   pathname: "/box/CreateBoxPage",
@@ -352,7 +368,6 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginHorizontal: 15,
   },
-  // YENİ KARARTMA EFEKTİ (Blur yerine)
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.4)', // %40 saydam siyah
