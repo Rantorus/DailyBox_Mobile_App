@@ -12,9 +12,8 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { useMediaStore } from '../../../store/mediaStore';
 
-// ==========================================
+
 // ALT BİLEŞEN: BELGE KARTI (DOC PLAYER/VIEWER)
-// ==========================================
 const DocCard = ({ item, theme, onRemove }) => {
     
     // Dosyayı Telefonun Kendi Uygulamalarıyla Açma İşlemi
@@ -81,9 +80,8 @@ const DocCard = ({ item, theme, onRemove }) => {
     );
 };
 
-// ==========================================
+
 // ANA SAYFA BİLEŞENİ
-// ==========================================
 export default function UploadDocs() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];

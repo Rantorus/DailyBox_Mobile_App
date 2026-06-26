@@ -7,7 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
-import ThemedInput from '../../components/ThemedInput';
+import ThemedInput from '../../components/ThemedInput'; 
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { useMediaStore } from '../../store/mediaStore';
@@ -16,9 +16,10 @@ import { Stack, useRouter } from 'expo-router';
 const { width, height } = Dimensions.get('window');
 
 // ==========================================
-// ALT BİLEŞEN: KAYDEDİLEN KONUM KARTI
+// ALT BİLEŞEN: DÜZENLEME MODU KONUM KARTI
 // ==========================================
-const LocationCard = ({ item, theme, onRemove }) => {
+const LocationCardEdit = ({ item, theme, onRemove }) => {
+    // Tıklandığında telefonun kendi harita uygulamasında (navigasyon) açar
     const handleOpenInMaps = () => {
         const url = Platform.select({
             ios: `maps:0,0?q=${item.title}@${item.latitude},${item.longitude}`,
@@ -59,21 +60,20 @@ const LocationCard = ({ item, theme, onRemove }) => {
 };
 
 // ==========================================
-// ANA BİLEŞEN: UPLOAD LOCATION
+// ANA BİLEŞEN: EDIT LOCATION
 // ==========================================
-export default function UploadLocation() {
+export default function EditLocation() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
     const router = useRouter();
-
     const mapRef = useRef(null);
 
-    const locations = useMediaStore(state => state.locations) || [];
+    // GLOBAL STORE (Yerel vitrin yok, her şey doğrudan ana depodan okunup yazılır)
+    const locations = useMediaStore(state => state.locations);
     const addLocation = useMediaStore(state => state.addLocation);
     const removeLocation = useMediaStore(state => state.removeLocation);
 
-    const [localLocations, setLocalLocations] = useState([]);
     const [isMapVisible, setIsMapVisible] = useState(false);
     const [showTitleModal, setShowTitleModal] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +91,27 @@ export default function UploadLocation() {
     const [locationTitle, setLocationTitle] = useState('');
     const [resolvedAddress, setResolvedAddress] = useState('');
 
+    // ==========================================
+    // SİLME İŞLEMİ (ONAYLI VE GLOBAL)
+    // ==========================================
+    const handleRemove = (id) => {
+        Alert.alert(
+            "Delete Location",
+            "Are you sure you want to delete this location?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => removeLocation(id) // Doğrudan globalden silinir, liste otomatik güncellenir
+                }
+            ]
+        );
+    };
+
+    // ==========================================
+    // HARİTA VE ARAMA İŞLEMLERİ
+    // ==========================================
     const openMapPicker = async () => {
         setIsMapVisible(true);
         setIsLoading(true);
@@ -162,9 +183,8 @@ export default function UploadLocation() {
         mapRef.current?.animateToRegion(newRegion, 800);
     };
 
-    // HARİTAYA TIKLANDIĞINDA ÇALIŞAN FONKSİYON GÜNCELLENDİ
     const handleMapPress = (e) => {
-        Keyboard.dismiss(); // Haritaya tıklandığı an klavyeyi gizler
+        Keyboard.dismiss();
         setMarkerCoords(e.nativeEvent.coordinate);
     };
 
@@ -176,7 +196,7 @@ export default function UploadLocation() {
 
         setIsLoading(true);
 
-        let suggestedTitle = `Location ${locations.length + localLocations.length + 1}`;
+        let suggestedTitle = `Location ${locations.length + 1}`;
         let fullAddress = "Açık adres bulunamadı";
 
         try {
@@ -221,8 +241,7 @@ export default function UploadLocation() {
             date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         };
 
-        addLocation(newLocation);
-        setLocalLocations(prev => [...prev, newLocation]);
+        addLocation(newLocation); // Global depoya eklendiği an FlatList bunu hemen ekranda gösterir
 
         setShowTitleModal(false);
         setIsMapVisible(false);
@@ -230,76 +249,55 @@ export default function UploadLocation() {
         setSearchResults([]);
     };
 
-    const handleRemoveLocal = (id) => {
-        removeLocation(id);
-        setLocalLocations(prev => prev.filter(loc => loc.id !== id));
-    };
-
-    function handleSave() {
-        router.back();
-    }
-
     return (
         <ThemedView style={styles.container} safe={true}>
-            {/* Ekranın üstündeki Box detail ve edit yazısı*/}
-                <Stack.Screen
-                    options={{
-
-                        headerRight: () => (
-                            <TouchableOpacity
-                                activeOpacity={0.7}
-                                onPress={() => {
-                                    handleSave();
-                                }}
-                                style={[styles.editButton, {
-                                    backgroundColor: theme.primary + '20',
-                                }]}
-
-                            >
-                                <Ionicons
-                                    name={"checkmark-outline"}
-                                    size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
-                                    color={theme.primary}
-                                />
-                                <ThemedText style={{
-                                    color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
-                                    fontWeight: "bold",
-                                    fontSize: 15
-                                }}>
-                                    Create
-                                </ThemedText>
-                            </TouchableOpacity>
-                        )
-                    }}
-                />
             <StatusBar style={theme.statusBarStyle} />
 
+            {/* Header Sağ Üst "Save" Butonu */}
+            <Stack.Screen
+                options={{
+                    headerRight: () => (
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => router.back()}
+                            style={[styles.editButton, { backgroundColor: theme.primary + '20' }]}
+                        >
+                            <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
+                            <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
+                                Save
+                            </ThemedText>
+                        </TouchableOpacity>
+                    )
+                }}
+            />
+
+            {/* ANA EKRAN İÇERİĞİ (TÜM KAYITLI KONUMLAR) */}
             <View style={styles.contentContainer}>
                 {isLoading && !isMapVisible && <ActivityIndicator size="large" color={theme.primary} style={{ marginBottom: 10 }} />}
 
-                {localLocations.length === 0 ? (
+                {locations.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={[styles.dashedBox, { borderColor: theme.primary }]}>
                             <Ionicons name="map-outline" size={40} color={theme.primary} style={{ marginBottom: 15 }} />
                             <ThemedText style={{ color: theme.textLight, textAlign: 'center', marginBottom: 5 }}>
-                                No locations added yet.
+                                No locations found.
                             </ThemedText>
                             <ThemedText style={{ color: theme.text, textAlign: 'center', fontWeight: '500' }}>
-                                Tap below to pick a location from the map.
+                                Tap below to add a new location.
                             </ThemedText>
                         </View>
                     </View>
                 ) : (
                     <View style={{ flex: 1 }}>
                         <ThemedText style={{ color: theme.textLight, fontSize: 13, marginBottom: 15, marginLeft: 5 }}>
-                            {`${localLocations.length} location${localLocations.length > 1 ? 's' : ''} added`}
+                            {`${locations.length} location${locations.length > 1 ? 's' : ''}`}
                         </ThemedText>
                         <FlatList
-                            data={localLocations}
+                            data={locations}
                             keyExtractor={item => item.id}
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 20 }}
-                            renderItem={({ item }) => <LocationCard item={item} theme={theme} onRemove={handleRemoveLocal} />}
+                            renderItem={({ item }) => <LocationCardEdit item={item} theme={theme} onRemove={handleRemove} />}
                         />
                     </View>
                 )}
@@ -312,7 +310,7 @@ export default function UploadLocation() {
                 </TouchableOpacity>
             </View>
 
-            {/* HARİTA MODALI */}
+            {/* HARİTA MODALI (Tam Ekran Mantığı Yok, Üzerine Binen Modal Mantığı Var) */}
             {isMapVisible && (
                 <ThemedView style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
                     <View style={{ flex: 1 }}>
@@ -322,13 +320,14 @@ export default function UploadLocation() {
                             style={{ width: width, height: height }}
                             initialRegion={mapRegion}
                             onPress={handleMapPress}
-                            onPanDrag={() => Keyboard.dismiss()} // KAYDIRMA ESNASINDA KLAVYE GİZLENİR
+                            onPanDrag={() => Keyboard.dismiss()} // Kaydırırken klavye kapanır
                         >
                             {markerCoords && (
                                 <Marker coordinate={markerCoords} pinColor={theme.primary} />
                             )}
                         </MapView>
 
+                        {/* --- OPAK SABİT RENKLİ ARAMA KUTUSU --- */}
                         <View style={styles.searchContainer}>
                             <View style={{ flex: 1 }}>
                                 <TextInput
@@ -345,6 +344,7 @@ export default function UploadLocation() {
                             </TouchableOpacity>
                         </View>
 
+                        {/* --- OPAK SABİT RENKLİ SONUÇ LİSTESİ --- */}
                         {searchResults.length > 0 && (
                             <View style={styles.resultsDropdownCard}>
                                 <FlatList
@@ -367,6 +367,7 @@ export default function UploadLocation() {
                             </View>
                         )}
 
+                        {/* --- HARİTA ALT BUTONLARI (KAPAT VE ONAYLA) --- */}
                         <View style={styles.mapActions}>
                             <TouchableOpacity style={[styles.mapRoundButton, { backgroundColor: '#ef4444' }]} onPress={() => setIsMapVisible(false)}>
                                 <Ionicons name="close" size={24} color="#fff" />
@@ -435,19 +436,11 @@ const styles = StyleSheet.create({
 
     bottomBar: { paddingVertical: 20, paddingHorizontal: 20, borderTopWidth: StyleSheet.hairlineWidth },
     actionButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderRadius: 15, gap: 8, justifyContent: 'center' },
-    editButton: {
-        marginRight: 15,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6, // İkon ve yazı arasındaki boşluk
-        paddingHorizontal: 12, // Sağdan soldan iç boşluk
-        paddingVertical: 6, // Üstten alttan iç boşluk
-        borderRadius: 20, // Tam oval (hap) görünümü için
-    },
+
     searchContainer: {
         flexDirection: 'row',
         position: 'absolute',
-        top: 25,
+        top: 25, // Çentik altı güvenli bölge
         left: 15,
         right: 15,
         zIndex: 9999,
@@ -473,7 +466,17 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent'
     },
     searchButton: { width: 44, height: 44, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
-
+    
+    editButton: {
+        marginRight: 15,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    
     resultsDropdownCard: {
         position: 'absolute',
         top: 90,
@@ -505,7 +508,7 @@ const styles = StyleSheet.create({
     mapConfirmButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, height: 50, borderRadius: 25, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 5 },
 
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-    modalCard: { width: '100%', padding: 25,gap:13, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 15, elevation: 10 },
+    modalCard: { width: '100%', padding: 25, gap: 13, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 15, elevation: 10 },
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
     modalCancelButton: { paddingVertical: 12, paddingHorizontal: 20, justifyContent: 'center' },
     modalSaveButton: { paddingVertical: 12, paddingHorizontal: 25, borderRadius: 12, justifyContent: 'center' }

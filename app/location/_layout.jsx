@@ -20,6 +20,16 @@ export default function NoteLayout() {
                 name="UploadLocation" 
                 options={{ title: "Create Location" }} 
             />
+
+            <Stack.Screen 
+                name="ViewLocation" 
+                options={{ title: "Location" }} 
+            />
+
+            <Stack.Screen 
+                name="EditLocation" 
+                options={{ title: "Edit Location" }} 
+            />
             
             
         </Stack>

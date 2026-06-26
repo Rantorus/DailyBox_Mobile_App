@@ -166,7 +166,7 @@ const BoxDetail = () => {
             {boxData.hasLocation && (
                 <>
                     <Spacer height={5} />
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`location/UploadLocation`)}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`location/ViewLocation`)}>
                         <ThemedCard style={styles.noteCard}>
                             <Ionicons name="location" size={24} color={theme.primary} />
 

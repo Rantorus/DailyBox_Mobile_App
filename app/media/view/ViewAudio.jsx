@@ -11,9 +11,7 @@ import { Colors } from '../../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 import { useMediaStore } from '../../../store/mediaStore';
 
-// ==========================================
 // ALT BİLEŞEN: SADECE OKUNUR (READ-ONLY) SES OYNATICI
-// ==========================================
 const AudioPlayerReadOnly = ({ item, theme, playingId, setPlayingId }) => {
     const [sound, setSound] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);

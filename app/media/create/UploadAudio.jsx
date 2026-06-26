@@ -29,12 +29,28 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         const initSound = async () => {
             const { sound: newSound, status } = await Audio.Sound.createAsync(
                 { uri: item.uri },
-                { shouldPlay: false },
-                onPlaybackStatusUpdate
+                { shouldPlay: false }
             );
+            
             currentSound = newSound;
             setSound(newSound);
             if (status.durationMillis) setDuration(status.durationMillis);
+
+            newSound.setOnPlaybackStatusUpdate((playbackStatus) => {
+                if (playbackStatus.isLoaded) {
+                    
+                    // EĞER SES BİTTİYSE: Kendi kendine başlamaması için stopAsync() kullanıyoruz
+                    if (playbackStatus.didJustFinish) {
+                        setIsPlaying(false);
+                        setPlayingId(null);
+                        setPosition(0);
+                        newSound.stopAsync(); // Ses motorunu tamamen durdurur ve güvenlice 0'a sarar
+                    } else {
+                        setPosition(playbackStatus.positionMillis);
+                        setIsPlaying(playbackStatus.isPlaying);
+                    }
+                }
+            });
         };
         
         initSound();
@@ -46,24 +62,13 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         };
     }, [item.uri]);
 
+    // Başka bir ses oynatıldığında bunu durdur
     useEffect(() => {
         if (playingId !== item.id && isPlaying && sound) {
             sound.pauseAsync();
             setIsPlaying(false);
         }
     }, [playingId]);
-
-    const onPlaybackStatusUpdate = (status) => {
-        if (status.isLoaded) {
-            setPosition(status.positionMillis);
-            setIsPlaying(status.isPlaying);
-            if (status.didJustFinish) {
-                setIsPlaying(false);
-                setPosition(0);
-                setPlayingId(null);
-            }
-        }
-    };
 
     const handlePlayPause = async () => {
         if (!sound) return;
@@ -73,6 +78,12 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
             setIsPlaying(false);
             setPlayingId(null);
         } else {
+            // Emniyet Kemeri: Eğer bir bug sebebiyle motor sonda takılı kaldıysa zorla başa sar
+            const status = await sound.getStatusAsync();
+            if (status.isLoaded && status.positionMillis >= duration - 100) {
+                await sound.setPositionAsync(0);
+            }
+
             setPlayingId(item.id);
             await sound.playAsync();
             setIsPlaying(true);
@@ -136,20 +147,21 @@ export default function UploadAudio() {
     const router = useRouter();
 
     // GLOBAL STORE 
-    const audios = useMediaStore(state => state.audios); // Sadece otomatik isim önerisi hesaplamak için tutuyoruz
+    const audios = useMediaStore(state => state.audios); 
     const addAudio = useMediaStore(state => state.addAudio);
     const removeAudio = useMediaStore(state => state.removeAudio);
 
-    // YEREL VİTRİN (Sadece bu ekran açıkken eklenenleri tutar, başlangıçta boştur)
+    // YEREL VİTRİN
     const [localAudios, setLocalAudios] = useState([]);
-
     const [playingAudioId, setPlayingAudioId] = useState(null);
 
+    // KAYIT DURUMLARI
     const [recording, setRecording] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
 
+    // İSİMLENDİRME MODALI
     const [showTitleModal, setShowTitleModal] = useState(false);
     const [pendingUri, setPendingUri] = useState(null);
     const [recordTitle, setRecordTitle] = useState('');
@@ -164,17 +176,11 @@ export default function UploadAudio() {
         })();
     }, []);
 
-    // ==========================================
-    // YEREL VE GLOBAL SİLME İŞLEMİ
-    // ==========================================
     const handleRemoveLocal = (id) => {
-        removeAudio(id); // 1. Globalden sil
-        setLocalAudios(prev => prev.filter(audio => audio.id !== id)); // 2. Ekrandan (Yerelden) sil
+        removeAudio(id); 
+        setLocalAudios(prev => prev.filter(audio => audio.id !== id)); 
     };
 
-    // ==========================================
-    // DOSYA SEÇME
-    // ==========================================
     const pickAudioFile = async () => {
         setPlayingAudioId(null);
 
@@ -202,8 +208,8 @@ export default function UploadAudio() {
                     date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                 };
 
-                addAudio(newAudio); // GLOBAL
-                setLocalAudios(prev => [...prev, newAudio]); // YEREL
+                addAudio(newAudio);
+                setLocalAudios(prev => [...prev, newAudio]);
 
             } catch (error) {
                 Alert.alert("Hata", "Ses dosyası eklenemedi.");
@@ -212,9 +218,6 @@ export default function UploadAudio() {
         }
     };
 
-    // ==========================================
-    // KAYIT İŞLEMLERİ
-    // ==========================================
     const startRecording = async () => {
         setPlayingAudioId(null);
 
@@ -271,7 +274,6 @@ export default function UploadAudio() {
         if (save) {
             const uri = recording.getURI();
             setPendingUri(uri);
-            // Global uzunluğa bakarak mantıklı bir varsayılan isim önerisi sunuyoruz
             setRecordTitle(`Ses Kaydı ${audios.length + 1}`);
             setShowTitleModal(true);
         }
@@ -295,8 +297,8 @@ export default function UploadAudio() {
             date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         };
 
-        addAudio(newAudio); // GLOBAL
-        setLocalAudios(prev => [...prev, newAudio]); // YEREL
+        addAudio(newAudio);
+        setLocalAudios(prev => [...prev, newAudio]);
 
         setShowTitleModal(false);
         setPendingUri(null);
@@ -314,7 +316,6 @@ export default function UploadAudio() {
         <ThemedView style={styles.container} safe={true}>
             <StatusBar style={theme.statusBarStyle} />
 
-            {/* İÇERİK - Artık localAudios kullanılıyor */}
             <View style={styles.contentContainer}>
                 {localAudios.length === 0 ? (
                     <View style={styles.emptyState}>
@@ -352,7 +353,6 @@ export default function UploadAudio() {
                 )}
             </View>
 
-            {/* ALT BAR: KAYIT VEYA NORMAL BUTONLAR */}
             {isRecording ? (
                 <View style={[styles.recordingBar, { backgroundColor: theme.cardBackground, borderTopColor: theme.border }]}>
                     <View style={styles.recordingHeader}>
@@ -394,7 +394,6 @@ export default function UploadAudio() {
                 </View>
             )}
 
-            {/* --- İSİM SORMASI İÇİN %100 OPAK MODAL PENCERESİ VE KLAVYE GİZLEME --- */}
             <Modal visible={showTitleModal} animationType="slide">
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                     <ThemedView style={styles.modalOverlay} safe={true}>
@@ -434,17 +433,14 @@ const styles = StyleSheet.create({
     emptyState: { flex: 1, justifyContent: 'center', paddingHorizontal: 10 },
     dashedBox: { borderWidth: 1.5, borderStyle: 'dashed', padding: 40, alignItems: 'center', borderRadius: 15, backgroundColor: 'transparent' },
     
-    // Player Stilleri
     playerCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 15, borderWidth: 1, marginBottom: 12 },
     playButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
     playerContent: { flex: 1, marginLeft: 10, marginRight: 5 },
     timeContainer: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 5, marginTop: -5 },
     
-    // Bottom Bar Stilleri
     bottomBar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 20, paddingHorizontal: 15, borderTopWidth: StyleSheet.hairlineWidth },
     actionButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 30, borderRadius: 15, gap: 8, flex: 0.45, justifyContent: 'center' },
     
-    // Kayıt Paneli Stilleri
     recordingBar: { paddingVertical: 20, paddingHorizontal: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
     recordingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     recordingActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -452,7 +448,6 @@ const styles = StyleSheet.create({
     pauseResumeButton: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
     stopButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 15, flex: 0.35, justifyContent: 'center' },
 
-    // YENİDEN DÜZENLENEN OPAK MODAL STİLLERİ
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
     modalCard: { width: '100%', padding: 25, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: {width: 0, height: 8}, shadowOpacity: 0.1, shadowRadius: 15, elevation: 10 },
     titleInput: { borderWidth: 1, borderRadius: 12, padding: 15, fontSize: 16, marginBottom: 25 },
