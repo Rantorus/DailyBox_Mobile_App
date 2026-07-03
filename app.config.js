@@ -57,6 +57,9 @@ module.exports = {
         {
           "faceIDPermission": "Uygulamaya hızlı giriş için Face ID kullanmak istiyor."
         }
+      ],
+      [
+        "expo-secure-store"
       ]
     ]
   }

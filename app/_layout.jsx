@@ -9,8 +9,8 @@ import { ThemeProvider, useTheme } from "../contexts/ThemeContext"
 
 // 1. İÇ BİLEŞEN
 const InnerLayout = () => {
-    const { themeName } = useTheme(); 
-    const theme = Colors[themeName];  
+    const { themeName } = useTheme();
+    const theme = Colors[themeName];
 
     return (
         <>
@@ -21,7 +21,8 @@ const InnerLayout = () => {
             }}>
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
                 <Stack.Screen name="index" options={{ title: "Daily Box" }} />
-                
+                <Stack.Screen name="register" options={{ title: "Register" }} />
+
                 {/* ✅ TÜM MODÜLLER KENDİ KLASÖRLERİNE (LAYOUTLARINA) YÖNLENDİRİLDİ */}
                 <Stack.Screen name="box" options={{ headerShown: false }} />
                 <Stack.Screen name="chapter" options={{ headerShown: false }} />

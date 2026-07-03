@@ -10,7 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Colors } from '../constants/Colors'
 import { useTheme } from '../contexts/ThemeContext.jsx'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { dummyUsers } from '../fetchUser/userInfo.js'
 
 // 1. OLUŞTURDUĞUMUZ STORE'U İÇERİ AKTAR
@@ -23,22 +23,36 @@ const index = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
-    // 2. STORE'DAN SET FONKSİYONUNU ÇEK
-    const setActiveUser = useUserStore((state) => state.setActiveUser);
+    // 2. STORE'DAN LOGIN FONKSİYONUNU ÇEK
+    const login = useUserStore((state) => state.login);
 
     const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
     const activeUser = useUserStore(state => state.activeUser);
 
-    const [email, setEmail] = useState(dummyUsers[0].email)
-    const [password, setPassword] = useState(dummyUsers[0].password)
+    const [email, setEmail] = useState('test@gmail.com')
+    const [password, setPassword] = useState('Test123')
     const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState(false)
+    const [error, setError] = useState('')
+
+    // Register sayfasından dönen verileri yakala
+    const params = useLocalSearchParams();
 
     useEffect(() => {
-        if (error) {
+        if (params.registeredEmail || params.registeredPassword) {
+            if (params.registeredEmail) setEmail(params.registeredEmail);
+            if (params.registeredPassword) setPassword(params.registeredPassword);
+            
+            // Parametreleri temizliyoruz ki kullanıcı sonradan bu alanları silebilsin veya değiştirebilsin.
+            // Aksi takdirde Expo Router her render'da bu verileri geri yazar.
+            router.setParams({ registeredEmail: '', registeredPassword: '' });
+        }
+    }, [params.registeredEmail, params.registeredPassword]);
+
+    useEffect(() => {
+        if (error !== '') {
             const timer = setTimeout(() => {
-                setError(false);
-            }, 2500);
+                setError('');
+            }, 3000);
             return () => clearTimeout(timer);
         }
     }, [error]);
@@ -50,25 +64,23 @@ const index = () => {
         }
     }, []);
 
-    function handleLogin() {
-        setIsLoading(true)
-        setTimeout(() => {
-            const matchedUser = dummyUsers.find(
-                (user) => user.email.toLowerCase() == email.toLowerCase().trim() &&
-                    user.password == password.trim()
-            )
+    async function handleLogin() {
+        if (!email.trim() || !password.trim()) {
+            setError('Lütfen tüm alanları doldurun.');
+            return;
+        }
 
-            if (matchedUser) {
-                // 3. EŞLEŞEN KULLANICIYI GLOBAL DEPOYA KAYDET
-                setActiveUser(matchedUser);
+        setIsLoading(true);
+        
+        // Gerçek Backend API'sine İstek Atar
+        const result = await login(email.trim(), password.trim());
 
-                router.replace("CalendarPage");
-            }
-            else {
-                setError(true)
-                setIsLoading(false)
-            }
-        }, 50)
+        if (result.success) {
+            router.replace("CalendarPage");
+        } else {
+            setError(result.error || 'Giriş başarısız oldu.');
+            setIsLoading(false);
+        }
     }
 
     const handleBiometricLogin = async () => {
@@ -119,11 +131,11 @@ const index = () => {
                     secureTextEntry
                 />
 
-                {error && (
+                {error !== '' && (
                     <>
                         <Spacer height={10} />
                         <ThemedText style={{ color: "red", fontSize: 16 }}>
-                            E-posta veya şifre hatalı!
+                            {error}
                         </ThemedText>
                         <Spacer height={15} />
                     </>
@@ -144,6 +156,17 @@ const index = () => {
                         </ThemedText>
                     </TouchableOpacity>
                 )}
+
+                <Spacer height={20} />
+
+                <TouchableOpacity onPress={() => router.push('register')}>
+                    <ThemedText style={{ fontSize: 14 }}>
+                        Don't have an account?{' '}
+                        <ThemedText title={true} style={{ fontSize: 14, textDecorationLine: 'underline' }}>
+                            Register
+                        </ThemedText>
+                    </ThemedText>
+                </TouchableOpacity>
             </ThemedView>
         </TouchableWithoutFeedback>
     )

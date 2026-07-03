@@ -1,20 +1,80 @@
-// store/userStore.js
 import { create } from 'zustand';
+import api from '../services/api';
+import { saveToken, removeToken, getToken } from '../services/tokenService';
 
-export const useUserStore = create((set) => ({
-  activeUser: null, // Başlangıçta kimse giriş yapmadı
-  
-  // Login başarılı olunca kullanıcıyı depoya kaydeder
-  setActiveUser: (user) => set({ activeUser: user }),
-  
-  // Logout yapınca depoyu temizler
-  logoutUser: () => set({ activeUser: null }),
-
-   // YENİ
+export const useUserStore = create((set, get) => ({
+    activeUser: null,
     isBiometricEnabled: false,
+    isLoading: false,
+    error: null,
+
     setBiometricEnabled: (value) => set({ isBiometricEnabled: value }),
 
-    setActiveUser: (user) => set({ activeUser: user }),
-    logoutUser: () => set({ activeUser: null }),
-    
+    // Gerçek API'ye Login İsteği Atar
+    login: async (email, password) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.post('/users/login', { email, password });
+            const payload = response.data; // { status, message, data: { accessToken: "..." } }
+            
+            // 1. Token'ı telefona güvenli kaydet (payload.data.accessToken)
+            await saveToken(payload.data.accessToken);
+            
+            // 2. Token kaydedildiğine göre, backend'den güncel kullanıcıyı getirtelim
+            const authResult = await get().checkAuth();
+            
+            return { success: authResult.success };
+        } catch (error) {
+            set({ 
+                error: error.response?.data?.message || 'Giriş başarısız oldu. Lütfen tekrar deneyin.', 
+                isLoading: false 
+            });
+            return { success: false, error: error.response?.data?.message };
+        }
+    },
+
+    // Gerçek API'ye Register İsteği Atar
+    register: async (fullName, email, password, location) => {
+        set({ isLoading: true, error: null });
+        try {
+            await api.post('/users/register', { fullName, email, password, location });
+            set({ isLoading: false });
+            return { success: true };
+        } catch (error) {
+            set({ 
+                error: error.response?.data?.message || 'Kayıt başarısız oldu. Lütfen tekrar deneyin.', 
+                isLoading: false 
+            });
+            return { success: false, error: error.response?.data?.message };
+        }
+    },
+
+    // Gerçek Logout
+    logoutUser: async () => {
+        await removeToken(); // Telefondaki şifreli depodan sil
+        set({ activeUser: null, error: null });
+    },
+
+    // Uygulama açılışında Token var mı diye bakar, varsa backend'den kullanıcıyı çeker
+    checkAuth: async () => {
+        set({ isLoading: true });
+        try {
+            const token = await getToken();
+            if (!token) {
+                set({ activeUser: null, isLoading: false });
+                return { success: false };
+            }
+
+            // Token varsa Backend'den güncel kullanıcıyı getir (token api.js tarafından otomatik header'a eklenir)
+            const response = await api.get('/users/current');
+            // Backend'deki handleResponse mimarisi response.data.data içinde veriyi yollar
+            set({ activeUser: response.data.data, isLoading: false });
+            return { success: true };
+        } catch (error) {
+            console.log("Oturum kontrol hatası: ", error.response?.data || error.message);
+            // 401 hatası aldıysa api.js'teki interceptor zaten token'ı silecektir.
+            set({ activeUser: null, isLoading: false });
+            return { success: false };
+        }
+    }
 }));
