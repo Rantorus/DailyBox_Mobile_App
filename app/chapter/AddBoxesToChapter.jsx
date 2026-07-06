@@ -14,7 +14,7 @@ import { useRouter, Stack, useLocalSearchParams } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
 import Spacer from '../../components/Spacer';
 
 const AddBoxesToChapter = () => {
@@ -22,6 +22,7 @@ const AddBoxesToChapter = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName]
     const router = useRouter()
+    const boxes = useBoxStore((state) => state.boxes);
     const [shownCategory, setShownCategory] = useState(true);
     const [isFilterVisible, setIsFilterVisible] = useState(false);
 
@@ -48,9 +49,9 @@ const AddBoxesToChapter = () => {
     // DİNAMİK TİP LİSTESİ ÇIKARMA
     // dummyBoxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
     const availableTypes = useMemo(() => {
-        const allTypes = dummyBoxes.map(box => box.type);
+        const allTypes = boxes.map(box => box.type);
         return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş olanları temizler
-    }, []);
+    }, [boxes]);
 
     // ÇOKLU SEÇİM İÇİN YARDIMCI FONKSİYON (Kum havuzu için)
     const toggleTempType = (type) => {
@@ -65,7 +66,7 @@ const AddBoxesToChapter = () => {
 
     // 3. İLK VERİ HAZIRLIĞI (Sonsuz döngüyü çözen useMemo yapısı)
     const filteredData = useMemo(() => {
-        return dummyBoxes
+        return boxes
             .filter((data) => {
                 const categoryMatch = shownCategory
                     ? data.category.toLowerCase() === 'log'
@@ -73,7 +74,7 @@ const AddBoxesToChapter = () => {
 
                 // GERÇEK FAVORİ FİLTRESİ
                 const favoriteMatch = showFavoritesOnly
-                    ? data.isFavorite === true
+                    ? (data.is_favorite === true || data.isFavorite === true)
                     : true;
 
                 const typeMatch = selectedTypes.length > 0
@@ -91,13 +92,13 @@ const AddBoxesToChapter = () => {
                     default: return 0;
                 }
             });
-    }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+    }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes, boxes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
 
     // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
     const { query, setQuery, results, loading } = useSearch(filteredData);
 
     // 5. ÖNİZLEME SAYACI (Filtre Paneli İçin)
-    const previewCount = dummyBoxes.filter((item) => {
+    const previewCount = boxes.filter((item) => {
         // 1. Temel Filtre: Log mu Plan mı?
         const categoryMatch = shownCategory
             ? item.category.toLowerCase() === 'log'
@@ -111,7 +112,7 @@ const AddBoxesToChapter = () => {
 
         // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)
         const favoriteMatch = tempShowFavoritesOnly
-            ? item.isFavorite === true
+            ? (item.is_favorite === true || item.isFavorite === true)
             : true;
 
         const typeMatch = tempSelectedTypes.length > 0
@@ -249,7 +250,7 @@ const AddBoxesToChapter = () => {
 
                                         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                                             <ThemedText>{item.date.split('T')[0]}</ThemedText>
-                                            {item.isFavorite ? (
+                                            {item.is_favorite || item.isFavorite ? (
                                                 <Ionicons name="star" size={24} color={theme.primary} />
                                             ) : (
                                                 <Ionicons name="star-outline" size={24} color={theme.border} />
@@ -267,7 +268,7 @@ const AddBoxesToChapter = () => {
                     }}
                     ListEmptyComponent={
                         <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-                            No records found for this date.
+                            No available boxes found.
                         </ThemedText>
                     }
                 />

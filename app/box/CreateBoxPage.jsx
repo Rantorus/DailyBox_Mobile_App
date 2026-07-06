@@ -14,8 +14,8 @@ import ThemedCard from '../../components/ThemedCard';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-// 1. DUMMY BOXES IMPORTU (Kendi dosya yoluna göre kontrol et)
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
+import { Alert, ActivityIndicator } from 'react-native';
 
 const CreateBoxPage = () => {
     const { themeName } = useTheme();
@@ -33,18 +33,52 @@ const CreateBoxPage = () => {
 
     const { category, date } = useLocalSearchParams();
 
+    const boxes = useBoxStore(state => state.boxes);
+    const createBox = useBoxStore(state => state.createBox);
+    const isLoading = useBoxStore(state => state.isLoading);
+
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
     const availableTypes = useMemo(() => {
-        const allTypes = dummyBoxes.map(box => box.type);
+        const allTypes = boxes.map(box => box.type);
         return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş veya undefined olanları temizler
-    }, []);
+    }, [boxes]);
 
-    function handleSave() {
+    async function handleSave() {
         if (title.trim() && description.trim() && dateValue.trim() && type.trim()) {
-            console.log(title, description, dateValue)
+            // ISO 8601 formata çevirme (örn: 2023-11-25T10:00:00Z)
+            // Kullanıcı "2026-06-18" girdiyse onu Date objesine çeviriyoruz. Eğer parse edilemiyorsa exception atabilir, o yüzden dikkatli olmalıyız.
+            let parsedDate;
+            try {
+                // Eğer GG-AA-YYYY girdiyse
+                if (dateValue.includes('-') && dateValue.split('-')[0].length !== 4) {
+                     const parts = dateValue.split('-');
+                     parsedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`).toISOString();
+                } else {
+                     parsedDate = new Date(dateValue).toISOString();
+                }
+            } catch (e) {
+                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD)");
+                 return;
+            }
+
+            const boxData = {
+                title: title.trim(),
+                description: description.trim(),
+                date: parsedDate,
+                type: type.trim(),
+                isFavorite: isFavorite,
+                category: category || "log", // URL params'dan gelen category
+            };
+
+            const result = await createBox(boxData);
+            if (result.success) {
+                router.back();
+            } else {
+                Alert.alert("Hata", result.error || "Kutu oluşturulamadı.");
+            }
         }
         else {
-            console.log("bos deger var");
+            Alert.alert("Eksik Bilgi", "Lütfen tüm zorunlu alanları doldurun.");
         }
     }
 
@@ -74,29 +108,35 @@ const CreateBoxPage = () => {
                         title: category === "plan" ? "Create Plan Box" : "Create Log Box",
 
                         headerRight: () => (
-                            <TouchableOpacity
-                                activeOpacity={0.7}
-                                onPress={() => {
-                                    handleSave();
-                                }}
-                                style={[styles.editButton, {
-                                    backgroundColor: theme.primary + '20',
-                                }]}
-
-                            >
-                                <Ionicons
-                                    name={"checkmark-outline"}
-                                    size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
-                                    color={theme.primary}
-                                />
-                                <ThemedText style={{
-                                    color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
-                                    fontWeight: "bold",
-                                    fontSize: 15
-                                }}>
-                                    Create
-                                </ThemedText>
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                        handleSave();
+                                    }}
+                                    style={[styles.editButton, {
+                                        backgroundColor: theme.primary + '20',
+                                    }]}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator size="small" color={theme.primary} />
+                                    ) : (
+                                        <>
+                                            <Ionicons
+                                                name={"checkmark-outline"}
+                                                size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
+                                                color={theme.primary}
+                                            />
+                                            <ThemedText style={{
+                                                color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
+                                                fontWeight: "bold",
+                                                fontSize: 15
+                                            }}>
+                                                Create
+                                            </ThemedText>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
                         )
                     }}
                 />

@@ -13,8 +13,6 @@ import { useRouter } from 'expo-router'
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
 import { useChapterStore } from '../../store/chapterStore';
 import Spacer from '../../components/Spacer';
 
@@ -197,7 +195,7 @@ const ChaptersPage = () => {
           )}
           ListEmptyComponent={
             <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-              No records found.
+              No chapters found.
             </ThemedText>
           }
         />

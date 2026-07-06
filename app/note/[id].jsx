@@ -4,7 +4,7 @@ import React from 'react';
 import { Colors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import ThemedCard from '../../components/ThemedCard';
@@ -20,12 +20,11 @@ const NoteDetails = () => {
 
     const router = useRouter();
 
-    const boxData = dummyBoxes.find((data) => {
-        return data.id == id;
-    });
+    const boxes = useBoxStore((state) => state.boxes);
+    const boxData = boxes.find((data) => data.id === id);
 
     // GÜVENLİK DUVARI: Veri gelmeden ekran çizilmeye çalışılırsa çökmesin diye
-    if (!boxData || !boxData.note) {
+    if (!boxData || (!boxData.has_note && !boxData.hasNote)) {
         return (
             <ThemedView style={{ flex: 1, justifyContent: "center", alignItems: "center" }} safe={true}>
                 <ActivityIndicator size="large" color={theme.primary} />
@@ -85,7 +84,7 @@ const NoteDetails = () => {
                         style={{ fontSize: 20, alignSelf: "center", textAlign: "center", marginTop: 10 }} 
                         title={true}
                     >
-                        {boxData.note.title}
+                        {boxData.note_title || boxData.note?.title}
                     </ThemedText>
 
                     <ThemedText
@@ -96,7 +95,7 @@ const NoteDetails = () => {
                             textAlign: "left" 
                         }}
                     >
-                        {boxData.note.content}
+                        {boxData.note_content || boxData.note?.content}
                     </ThemedText>
 
                 </ThemedCard>

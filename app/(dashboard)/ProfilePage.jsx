@@ -9,7 +9,7 @@ import ThemedText from '../../components/ThemedText';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
 import { useChapterStore } from '../../store/chapterStore';
 
 // Global Store'lar
@@ -56,11 +56,12 @@ export default function ProfilePage() {
   const activeUserEmail = activeUser?.email || "E-posta bulunamadı";
 
   const chapters = useChapterStore((state) => state.chapters);
+  const boxes = useBoxStore((state) => state.boxes);
   
-  const boxesCount = dummyBoxes?.length || 0;
+  const boxesCount = boxes?.length || 0;
   const chaptersCount = chapters?.length || 0;
-  const logsCount = dummyBoxes?.filter(box => box.category === 'log').length || 0;
-  const plansCount = dummyBoxes?.filter(box => box.category === 'plan').length || 0;
+  const logsCount = boxes?.filter(box => box.category === 'log').length || 0;
+  const plansCount = boxes?.filter(box => box.category === 'plan').length || 0;
 
   // ==========================================
   // FONKSİYONLAR

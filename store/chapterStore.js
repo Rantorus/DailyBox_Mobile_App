@@ -62,7 +62,27 @@ export const useChapterStore = create((set, get) => ({
         }
     },
 
-    // 4. Chapter sil (DELETE /api/chapters/:id)
+    // 4. Chapter'a kutu ekle (POST /api/chapters/:id/boxes)
+    addBoxToChapter: async (chapterId, boxId) => {
+        try {
+            await api.post(`/chapters/${chapterId}/boxes`, { boxId });
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Box could not be added to chapter.' };
+        }
+    },
+
+    // 5. Chapter'dan kutu çıkar (DELETE /api/chapters/:id/boxes/:boxId)
+    removeBoxFromChapter: async (chapterId, boxId) => {
+        try {
+            await api.delete(`/chapters/${chapterId}/boxes/${boxId}`);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Box could not be removed from chapter.' };
+        }
+    },
+
+    // 6. Chapter sil (DELETE /api/chapters/:id)
     deleteChapter: async (id) => {
         set({ isLoading: true, error: null });
         try {

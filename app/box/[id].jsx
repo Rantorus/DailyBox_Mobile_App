@@ -7,7 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import Spacer from '../../components/Spacer';
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
+import { ActivityIndicator } from 'react-native';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -22,10 +23,16 @@ const BoxDetail = () => {
     const router = useRouter();
 
 
-    const boxData = dummyBoxes.find((data) => {
-        return data.id == id
+    const boxes = useBoxStore((state) => state.boxes);
+    const boxData = boxes.find((data) => data.id === id);
 
-    })
+    if (!boxData) {
+        return (
+            <ThemedView safe={true} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView safe={true} style={styles.container}>
@@ -75,7 +82,7 @@ const BoxDetail = () => {
                 {/* Yıldız İkonu (Sağ üst köşeye sabitlendi) */}
                 <View style={{ position: "absolute", top: 5, right: 5 }}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Favori tıklandı")}>
-                        {boxData.isFavorite ? (
+                        {boxData.is_favorite || boxData.isFavorite ? (
                             <Ionicons name="star" size={24} color={theme.primary} /> // Favori rengi genelde altın/sarı olur
                         ) : (
                             <Ionicons name="star-outline" size={24} color={theme.border} />
@@ -128,7 +135,7 @@ const BoxDetail = () => {
                 ]}
             />
 
-            {boxData.hasNote && (
+            {(boxData.has_note || boxData.hasNote) && (
                 <>
                     <Spacer height={20} />
                     <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`note/${boxData.id}`)}>
@@ -147,7 +154,7 @@ const BoxDetail = () => {
                 </>
             )}
 
-            {boxData.hasTodos && (
+            {(boxData.has_todos || boxData.hasTodos) && (
                 <>
                     <Spacer height={5} />
                     <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`todo/${boxData.id}`)}>
@@ -160,7 +167,7 @@ const BoxDetail = () => {
 
 
                             <ThemedText style={{ alignSelf: "center" }} title={true}>Todos</ThemedText>
-                            <ThemedText style={{ alignSelf: "center" }} title={true}>({boxData.todos.length} tasks)</ThemedText>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>({boxData.todos?.length || 0} tasks)</ThemedText>
 
                         </ThemedCard>
                     </TouchableOpacity>
@@ -168,7 +175,7 @@ const BoxDetail = () => {
                 </>
             )}
 
-            {boxData.hasLocation && (
+            {(boxData.has_location || boxData.hasLocation) && (
                 <>
                     <Spacer height={5} />
                     <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`location/ViewLocation`)}>
@@ -187,7 +194,7 @@ const BoxDetail = () => {
                 </>
             )}
 
-            {boxData.hasMedia && (
+            {(boxData.has_media || boxData.hasMedia) && (
                 <>
                     <Spacer height={5} />
                     <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`media/view/ViewPhoto`)}>

@@ -10,7 +10,8 @@ import ThemedInput from '../../components/ThemedInput';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
+import { ActivityIndicator, Alert } from 'react-native';
 
 const EditNotePage = () => {
     const { themeName } = useTheme();
@@ -19,13 +20,23 @@ const EditNotePage = () => {
 
     const { boxDataId } = useLocalSearchParams();
     
-        const boxData = dummyBoxes.find((data) => {
-            return data.id == boxDataId
-    
-        })
+    const boxes = useBoxStore((state) => state.boxes);
+    const updateBox = useBoxStore((state) => state.updateBox);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const [title, setTitle] = useState(boxData.note.title);
-    const [content, setContent] = useState(boxData.note.content);
+    const boxData = boxes.find((data) => data.id === boxDataId);
+    
+    // GÜVENLİK
+    if (!boxData) {
+        return (
+            <ThemedView style={{ flex: 1, justifyContent: "center", alignItems: "center" }} safe={true}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </ThemedView>
+        );
+    }
+
+    const [title, setTitle] = useState(boxData.note_title || boxData.note?.title || "");
+    const [content, setContent] = useState(boxData.note_content || boxData.note?.content || "");
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [selectedColor, setSelectedColor] = useState(theme.text); // Sadece bu state yeterli
@@ -51,12 +62,23 @@ const EditNotePage = () => {
         };
     }, []);
 
-    function handleSave() {
+    async function handleSave() {
         if (title.trim() && content.trim()) {
-            console.log("Saved Note:", { title, content, isBold, isItalic, selectedColor });
-            router.back();
+            setIsLoading(true);
+            const result = await updateBox(boxDataId, {
+                hasNote: true,
+                noteTitle: title.trim(),
+                noteContent: content.trim()
+            });
+            setIsLoading(false);
+
+            if (result.success) {
+                router.back();
+            } else {
+                Alert.alert("Hata", result.error || "Not kaydedilemedi.");
+            }
         } else {
-            console.log("Başlık veya içerik boş olamaz.");
+            Alert.alert("Eksik Bilgi", "Başlık veya içerik boş olamaz.");
         }
     }
 
@@ -71,11 +93,18 @@ const EditNotePage = () => {
                             activeOpacity={0.7}
                             onPress={handleSave}
                             style={[styles.editButton, { backgroundColor: theme.primary + '20' }]}
+                            disabled={isLoading}
                         >
-                            <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
-                            <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
-                                Edit
-                            </ThemedText>
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color={theme.primary} />
+                            ) : (
+                                <>
+                                    <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
+                                    <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
+                                        Save
+                                    </ThemedText>
+                                </>
+                            )}
                         </TouchableOpacity>
                     )
                 }}

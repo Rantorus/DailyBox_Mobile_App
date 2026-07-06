@@ -13,8 +13,7 @@ import ThemedCard from '../../components/ThemedCard';
 
 import { Ionicons } from '@expo/vector-icons';
 
-// DUMMY DATA IMPORTLARI
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
 import { useChapterStore } from '../../store/chapterStore';
 
 const EditChapterPage = () => {
@@ -29,7 +28,10 @@ const EditChapterPage = () => {
     const chapters = useChapterStore((state) => state.chapters);
     const updateChapter = useChapterStore((state) => state.updateChapter);
     const deleteChapter = useChapterStore((state) => state.deleteChapter);
+    const addBoxToChapter = useChapterStore((state) => state.addBoxToChapter);
+    const removeBoxFromChapterStore = useChapterStore((state) => state.removeBoxFromChapter);
     const isLoading = useChapterStore((state) => state.isLoading);
+    const boxes = useBoxStore((state) => state.boxes);
 
     const chapterData = chapters.find((data) => data.id === chapterDataId);
 
@@ -82,8 +84,8 @@ const EditChapterPage = () => {
         }
 
         // Filtreleme yaparken yine de güvenli tarafta kalalım
-        return dummyBoxes.filter((box) => selectedBoxes.includes(box.id));
-    }, [selectedBoxes]);
+        return boxes.filter((box) => selectedBoxes.includes(box.id));
+    }, [selectedBoxes, boxes]);
 
     if (!chapterData) {
         return (
@@ -103,6 +105,14 @@ const EditChapterPage = () => {
             });
 
             if (result.success) {
+                // Determine new boxes to add
+                const originalBoxes = chapterData?.boxIds || [];
+                const boxesToAdd = selectedBoxes.filter(id => !originalBoxes.includes(id));
+                
+                for (const boxId of boxesToAdd) {
+                    await addBoxToChapter(chapterDataId, boxId);
+                }
+
                 router.back();
             } else {
                 Alert.alert("Hata", result.error || "Chapter güncellenemedi.");
@@ -137,12 +147,18 @@ const EditChapterPage = () => {
         );
     };
 
-    const handleRemoveBox = (boxIdToRemove) => {
-        // Önceki state'i alıyoruz (prevBoxes)
+    const handleRemoveBox = async (boxIdToRemove) => {
+        // Optimistic UI update
         setSelectedBoxes((prevBoxes) =>
-            // Silinmek istenen ID'ye EŞİT OLMAYANLARI filtreleyip yeni listeyi oluşturuyoruz
             prevBoxes.filter(id => id !== boxIdToRemove)
         );
+        
+        // Remove from backend
+        const result = await removeBoxFromChapterStore(chapterDataId, boxIdToRemove);
+        if (!result.success) {
+             Alert.alert("Hata", result.error || "Kutu chapterdan çıkarılamadı.");
+             // Revert UI if needed (optional)
+        }
     };
 
     return (
@@ -345,7 +361,7 @@ const EditChapterPage = () => {
                                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
                                         <ThemedText style={{ color: 'gray' }}>{item.date.split('T')[0]}</ThemedText>
 
-                                        {item.isFavorite ? (
+                                        {item.is_favorite || item.isFavorite ? (
                                             <Ionicons name="star" size={18} color={theme.primary} />
                                         ) : (
                                             <Ionicons name="star-outline" size={18} color={theme.border} />

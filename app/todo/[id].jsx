@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
+import { useTodoStore } from '../../store/todoStore';
 
 import ThemedView from '../../components/ThemedView'
 import ThemedText from '../../components/ThemedText';
@@ -19,15 +20,22 @@ const TodoDetail = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
-    const boxData = dummyBoxes.find((data) => data.id == id);
+    const boxes = useBoxStore((state) => state.boxes);
+    const boxData = boxes.find((data) => data.id === id);
+
+    const todos = useTodoStore((state) => state.todos);
+    const fetchBoxTodos = useTodoStore((state) => state.fetchBoxTodos);
+    const addTodo = useTodoStore((state) => state.addTodo);
+    const updateTodo = useTodoStore((state) => state.updateTodo);
+    const deleteTodoStore = useTodoStore((state) => state.deleteTodo);
+    const isLoading = useTodoStore((state) => state.isLoading);
 
     const [newTodo, setNewTodo] = useState("");
-    const [todos, setTodos] = useState([]); 
 
-    // Veri yüklendiğinde state'i doldur
+    // Veri yüklendiğinde fetch at
     useEffect(() => {
-        if (boxData && boxData.todos) {
-            setTodos(boxData.todos);
+        if (boxData) {
+            fetchBoxTodos(boxData.id);
         }
     }, [boxData]);
 
@@ -41,38 +49,25 @@ const TodoDetail = () => {
     }
 
     // --- VERİ AYRIŞTIRMA (FILTERING) ---
-    const activeTodos = todos.filter(todo => todo.isCompleted === false);
-    const doneTodos = todos.filter(todo => todo.isCompleted === true);
+    const activeTodos = todos.filter(todo => todo.is_completed === false || todo.isCompleted === false);
+    const doneTodos = todos.filter(todo => todo.is_completed === true || todo.isCompleted === true);
 
     // --- ETKİLEŞİM FONKSİYONLARI ---
-    const toggleTodoStatus = (todoId) => {
-        const updatedTodos = todos.map(todo => {
-            if (todo.id === todoId) {
-                return { ...todo, isCompleted: !todo.isCompleted };
-            }
-            return todo;
-        });
-        setTodos(updatedTodos); 
+    const toggleTodoStatus = async (todo) => {
+        await updateTodo(todo.id, { isCompleted: !todo.is_completed && !todo.isCompleted });
     };
 
-    const handleAddTodo = () => {
+    const handleAddTodo = async () => {
         if (newTodo.trim() === "") return; 
 
-        const newTask = {
-            id: `todo_${Date.now()}`, 
-            text: newTodo,
-            isCompleted: false 
-        };
-
-        setTodos([newTask, ...todos]); 
-        setNewTodo(""); 
+        const result = await addTodo(boxData.id, newTodo.trim());
+        if (result.success) {
+            setNewTodo(""); 
+        }
     };
 
-    // YENİ EKLENEN: SİLME FONKSİYONU
-    const deleteTodo = (todoId) => {
-        // ID'si eşleşmeyenleri tut, eşleşeni (silinmek isteneni) diziden at
-        const updatedTodos = todos.filter(todo => todo.id !== todoId);
-        setTodos(updatedTodos);
+    const deleteTodo = async (todoId) => {
+        await deleteTodoStore(todoId);
     };
 
     return (
@@ -116,7 +111,7 @@ const TodoDetail = () => {
                                 <TouchableOpacity 
                                     style={styles.todoContent} 
                                     activeOpacity={0.7} 
-                                    onPress={() => toggleTodoStatus(todo.id)}
+                                    onPress={() => toggleTodoStatus(todo)}
                                 >
                                     <Ionicons name="ellipse-outline" size={24} color={theme.textLight} />
                                     <ThemedText style={styles.todoText}>{todo.text}</ThemedText>
@@ -153,7 +148,7 @@ const TodoDetail = () => {
                                 <TouchableOpacity 
                                     style={styles.todoContent} 
                                     activeOpacity={0.7} 
-                                    onPress={() => toggleTodoStatus(todo.id)}
+                                    onPress={() => toggleTodoStatus(todo)}
                                 >
                                     <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
                                     <ThemedText style={[styles.todoText, { textDecorationLine: 'line-through', color: theme.textLight }]}>

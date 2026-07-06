@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { useUserStore } from "../store/useStore"
-import { useRouter } from "expo-router"
+import { Redirect } from "expo-router"
 import { ActivityIndicator } from "react-native"
 import ThemedView from "../components/ThemedView"
 import { useTheme } from "../contexts/ThemeContext"
@@ -12,13 +12,10 @@ const GuestOnly = ({children}) => {
     
     const isAuthChecking = useUserStore(state => state.isAuthChecking)
     const activeUser = useUserStore(state => state.activeUser)
-    const router = useRouter()
-
-    useEffect(() => {
-        if (!isAuthChecking && activeUser !== null) {
-            router.replace("/(dashboard)/CalendarPage")
-        }
-    }, [activeUser, isAuthChecking])
+    
+    if (!isAuthChecking && activeUser !== null) {
+        return <Redirect href="/(dashboard)/CalendarPage" />
+    }
 
     if (isAuthChecking || activeUser) {
         return (

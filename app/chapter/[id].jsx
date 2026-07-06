@@ -8,7 +8,7 @@ import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import Spacer from '../../components/Spacer';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import api from '../../services/api';
 import { useChapterStore } from '../../store/chapterStore';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -35,8 +35,26 @@ const ChapterDetail = () => {
         );
     }
 
-    //BU ALBÜMÜN İÇİNDEKİ KUTULARI (BOXES) FİLTRELE
-    const includedBoxes = dummyBoxes.filter(box => (chapterData.boxIds || []).includes(box.id));
+    const [includedBoxes, setIncludedBoxes] = React.useState([]);
+    const [loadingBoxes, setLoadingBoxes] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchChapterBoxes = async () => {
+            setLoadingBoxes(true);
+            try {
+                const response = await api.get(`/boxes/chapter/${id}`);
+                setIncludedBoxes(response.data.data || response.data || []);
+            } catch (err) {
+                console.error("Failed to fetch chapter boxes:", err);
+            } finally {
+                setLoadingBoxes(false);
+            }
+        };
+
+        if (id) {
+            fetchChapterBoxes();
+        }
+    }, [id]);
 
     return (
         <ThemedView safe={true} style={styles.container}>
@@ -86,7 +104,7 @@ const ChapterDetail = () => {
                 {/* Yıldız İkonu (Sağ üst köşeye sabitlendi) */}
                 <View style={{ position: "absolute", top: 5, right: 5 }}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Favori tıklandı")}>
-                        {chapterData.is_favorite ? (
+                        {chapterData.is_favorite || chapterData.isFavorite ? (
                             <Ionicons name="star" size={24} color={theme.primary} /> // Favori rengi genelde altın/sarı olur
                         ) : (
                             <Ionicons name="star-outline" size={24} color={theme.border} />
@@ -114,36 +132,40 @@ const ChapterDetail = () => {
                 ]}
             />
 
-            <FlatList
-                data={includedBoxes}
-                keyExtractor={(item) => item.id}
-                style={{ marginBottom: 40 }}
-                contentContainerStyle={styles.list}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                    <Pressable onPress={() => router.push(`box/${item.id}`)}>
-                        <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
-              <ThemedText style={styles.title}>{item.title}</ThemedText>
+            {loadingBoxes ? (
+                <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 20 }} />
+            ) : (
+                <FlatList
+                    data={includedBoxes}
+                    keyExtractor={(item) => item.id}
+                    style={{ marginBottom: 40 }}
+                    contentContainerStyle={styles.list}
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item }) => (
+                        <Pressable onPress={() => router.push(`box/${item.id}`)}>
+                            <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
+                                <ThemedText style={styles.title}>{item.title}</ThemedText>
 
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText>{item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}</ThemedText>
-                  {item.isFavorite ? (
-                    <Ionicons name="star" size={24} color={theme.primary} />
-                  ) : (
-                    <Ionicons name="star-outline" size={24} color={theme.border} />
-                  )}
-                </View>
-                
-              <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
-            </ThemedCard>
-                    </Pressable>
-                )}
-                ListEmptyComponent={
-                    <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-                        No records found for this date.
-                    </ThemedText>
-                }
-            />
+                                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                                    <ThemedText>{item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}</ThemedText>
+                                    {item.is_favorite || item.isFavorite ? (
+                                        <Ionicons name="star" size={24} color={theme.primary} />
+                                    ) : (
+                                        <Ionicons name="star-outline" size={24} color={theme.border} />
+                                    )}
+                                </View>
+                                
+                                <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
+                            </ThemedCard>
+                        </Pressable>
+                    )}
+                    ListEmptyComponent={
+                        <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
+                            No boxes found in this chapter.
+                        </ThemedText>
+                    }
+                />
+            )}
 
 
 

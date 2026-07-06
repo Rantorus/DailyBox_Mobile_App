@@ -1,5 +1,5 @@
-import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Colors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemedView from '../../components/ThemedView';
@@ -14,7 +14,8 @@ import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+
+import { useBoxStore } from '../../store/boxStore';
 import Spacer from '../../components/Spacer';
 
 const BoxesPage = () => {
@@ -26,6 +27,17 @@ const BoxesPage = () => {
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
 
+  //Zustand store
+  const boxes = useBoxStore((state) => state.boxes);
+  const isLoading = useBoxStore((state) => state.isLoading);
+  const error = useBoxStore((state) => state.error);
+  const fetchMyBoxes = useBoxStore((state) => state.fetchMyBoxes);
+
+  useEffect(() => {
+    fetchMyBoxes();
+  }, []);
+
+
   const [sortBy, setSortBy] = useState("new");
   const [tempSortBy, setTempSortBy] = useState('new');
 
@@ -36,11 +48,11 @@ const BoxesPage = () => {
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]);
 
   // DİNAMİK TİP LİSTESİ ÇIKARMA
-  // dummyBoxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
+  // boxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
   const availableTypes = useMemo(() => {
-    const allTypes = dummyBoxes.map(box => box.type);
+    const allTypes = boxes.map(box => box.type);
     return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş olanları temizler
-  }, []);
+  }, [boxes]);
 
   // ÇOKLU SEÇİM İÇİN YARDIMCI FONKSİYON (Kum havuzu için)
   const toggleTempType = (type) => {
@@ -55,7 +67,7 @@ const BoxesPage = () => {
 
   // 3. İLK VERİ HAZIRLIĞI (Sonsuz döngüyü çözen useMemo yapısı)
   const filteredData = useMemo(() => {
-    return dummyBoxes
+    return boxes
       .filter((data) => {
         const categoryMatch = shownCategory
           ? data.category.toLowerCase() === 'log'
@@ -63,7 +75,7 @@ const BoxesPage = () => {
 
         // GERÇEK FAVORİ FİLTRESİ
         const favoriteMatch = showFavoritesOnly
-          ? data.isFavorite === true
+          ? data.is_favorite === true || data.isFavorite === true
           : true;
 
         const typeMatch = selectedTypes.length > 0
@@ -81,13 +93,13 @@ const BoxesPage = () => {
           default: return 0;
         }
       });
-  }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+  }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes, boxes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
 
   // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
   const { query, setQuery, results, loading } = useSearch(filteredData);
 
   // 5. ÖNİZLEME SAYACI (Filtre Paneli İçin)
-  const previewCount = dummyBoxes.filter((item) => {
+  const previewCount = boxes.filter((item) => {
     // 1. Temel Filtre: Log mu Plan mı?
     const categoryMatch = shownCategory
       ? item.category.toLowerCase() === 'log'
@@ -101,7 +113,7 @@ const BoxesPage = () => {
 
     // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)
     const favoriteMatch = tempShowFavoritesOnly
-      ? item.isFavorite === true
+      ? item.is_favorite === true || item.isFavorite === true
       : true;
 
     const typeMatch = tempSelectedTypes.length > 0
@@ -169,48 +181,54 @@ const BoxesPage = () => {
 
         <Spacer height={10} />
 
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`box/${item.id}`)}>
-              <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
-
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText title={true} >{item.title}</ThemedText>
-                  <ThemedText >{item.type}</ThemedText>
-                </View>
-
-                <ThemedText >{item.description}</ThemedText>
-
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText>
-                    {/* 2026-06-18 -> 18-06-2026 dönüşümü */}
-                    {item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}
-                  </ThemedText>
-
-                  {item.isFavorite ? (
-                    <Ionicons name="star" size={24} color={theme.primary} />
-                  ) : (
-                    <Ionicons name="star-outline" size={24} color={theme.border} />
-                  )}
-                </View>
-
-
-                <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
-
-
-              </ThemedCard>
-            </Pressable>
-          )}
-          ListEmptyComponent={
-            <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-              No records found for this date.
-            </ThemedText>
-          }
-        />
+        {isLoading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 }}>
+            <ActivityIndicator size="large" color={theme.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={results}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <Pressable onPress={() => router.push(`box/${item.id}`)}>
+                <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
+  
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <ThemedText title={true} >{item.title}</ThemedText>
+                    <ThemedText >{item.type}</ThemedText>
+                  </View>
+  
+                  <ThemedText >{item.description}</ThemedText>
+  
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <ThemedText>
+                      {/* 2026-06-18 -> 18-06-2026 dönüşümü */}
+                      {item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}
+                    </ThemedText>
+  
+                    {item.is_favorite || item.isFavorite ? (
+                      <Ionicons name="star" size={24} color={theme.primary} />
+                    ) : (
+                      <Ionicons name="star-outline" size={24} color={theme.border} />
+                    )}
+                  </View>
+  
+  
+                  <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
+  
+  
+                </ThemedCard>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
+                No boxes found matching your filters.
+              </ThemedText>
+            }
+          />
+        )}
 
         {(isFilterVisible || isCreateCardVisible) && (
           <Pressable

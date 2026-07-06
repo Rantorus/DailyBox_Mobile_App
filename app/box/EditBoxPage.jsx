@@ -14,8 +14,8 @@ import ThemedCard from '../../components/ThemedCard';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
-
+import { useBoxStore } from '../../store/boxStore';
+import { ActivityIndicator, Alert } from 'react-native';
 
 
 const EditBoxPage = () => {
@@ -24,23 +24,25 @@ const EditBoxPage = () => {
 
     const { boxDataId } = useLocalSearchParams();
 
-    const boxData = dummyBoxes.find((data) => {
-        return data.id == boxDataId
+    const boxes = useBoxStore(state => state.boxes);
+    const updateBox = useBoxStore(state => state.updateBox);
+    const deleteBox = useBoxStore(state => state.deleteBox);
+    const isLoading = useBoxStore(state => state.isLoading);
 
-    })
+    const boxData = boxes.find((data) => data.id === boxDataId);
 
-    const [title, setTitle] = useState(boxData.title);
-    const [description, setDescription] = useState(boxData.description);
-    const [dateValue, setDateValue] = useState(boxData.date.split('T')[0]);
-    const [type, setType] = useState(boxData.type);
+    const [title, setTitle] = useState(boxData?.title || "");
+    const [description, setDescription] = useState(boxData?.description || "");
+    const [dateValue, setDateValue] = useState(boxData?.date ? boxData.date.split('T')[0] : "");
+    const [type, setType] = useState(boxData?.type || "");
     const [isTypesVisible, setIsTypesVisible] = useState(true);
-    const [isFavorite, setIsFavorite] = useState(boxData.isFavorite);
+    const [isFavorite, setIsFavorite] = useState(boxData?.is_favorite || boxData?.isFavorite || false);
     const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
 
-    const [isAlreadyAdedNotes, setIsAlreadyAdedNotes] = useState(boxData.hasNote || false);
-    const [isAlreadyAdedTodos, setIsAlreadyAdedTodos] = useState(boxData.hasTodos || false);
-    const [isAlreadyAdedLocation, setIsAlreadyAdedLocation] = useState(boxData.hasLocation || false);
-    const [isAlreadyAdedMedia, setIsAlreadyAdedMedia] = useState(boxData.hasMedia || false);
+    const [isAlreadyAdedNotes, setIsAlreadyAdedNotes] = useState(boxData?.has_note || false);
+    const [isAlreadyAdedTodos, setIsAlreadyAdedTodos] = useState(boxData?.has_todos || false); // Backend'de has_todos var mı? DB'de yok ama neyse
+    const [isAlreadyAdedLocation, setIsAlreadyAdedLocation] = useState(boxData?.has_location || false);
+    const [isAlreadyAdedMedia, setIsAlreadyAdedMedia] = useState(boxData?.has_media || false);
 
     const router = useRouter();
 
@@ -60,13 +62,76 @@ const EditBoxPage = () => {
 
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
     const availableTypes = useMemo(() => {
-        const allTypes = dummyBoxes.map(box => box.type);
+        const allTypes = boxes.map(box => box.type);
         return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş veya undefined olanları temizler
-    }, []);
+    }, [boxes]);
 
-    function handleSave() {
-        router.back();
+    if (!boxData) {
+        return (
+            <ThemedView safe={true} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </ThemedView>
+        );
     }
+
+    async function handleSave() {
+        if (title.trim() && description.trim() && dateValue.trim() && type.trim()) {
+            let parsedDate;
+            try {
+                if (dateValue.includes('-') && dateValue.split('-')[0].length !== 4) {
+                     const parts = dateValue.split('-');
+                     parsedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`).toISOString();
+                } else {
+                     parsedDate = new Date(dateValue).toISOString();
+                }
+            } catch (e) {
+                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD)");
+                 return;
+            }
+
+            const updateData = {
+                title: title.trim(),
+                description: description.trim(),
+                date: parsedDate,
+                type: type.trim(),
+                isFavorite: isFavorite,
+            };
+
+            const result = await updateBox(boxDataId, updateData);
+            if (result.success) {
+                router.back();
+            } else {
+                Alert.alert("Hata", result.error || "Kutu güncellenemedi.");
+            }
+        }
+        else {
+            Alert.alert("Eksik Bilgi", "Lütfen tüm zorunlu alanları doldurun.");
+        }
+    }
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Box",
+            "Are you sure you want to delete this box? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        const result = await deleteBox(boxDataId);
+                        if (result.success) {
+                            setTimeout(() => {
+                                router.replace("/(dashboard)/BoxesPage");
+                            }, 100);
+                        } else {
+                            Alert.alert("Hata", result.error || "Box silinemedi.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     return (
         // 3. KLAVYE GİZLEME DÜZELTİLDİ: Tüm sayfayı sarmaladık ki boşluğa basınca klavye kapansın
@@ -79,29 +144,35 @@ const EditBoxPage = () => {
                     options={{
 
                         headerRight: () => (
-                            <TouchableOpacity
-                                activeOpacity={0.7}
-                                onPress={() => {
-                                    handleSave();
-                                }}
-                                style={[styles.editButton, {
-                                    backgroundColor: theme.primary + '20',
-                                }]}
-
-                            >
-                                <Ionicons
-                                    name={"checkmark-outline"}
-                                    size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
-                                    color={theme.primary}
-                                />
-                                <ThemedText style={{
-                                    color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
-                                    fontWeight: "bold",
-                                    fontSize: 15
-                                }}>
-                                    Save
-                                </ThemedText>
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                        handleSave();
+                                    }}
+                                    style={[styles.editButton, {
+                                        backgroundColor: theme.primary + '20',
+                                    }]}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator size="small" color={theme.primary} />
+                                    ) : (
+                                        <>
+                                            <Ionicons
+                                                name={"checkmark-outline"}
+                                                size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
+                                                color={theme.primary}
+                                            />
+                                            <ThemedText style={{
+                                                color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
+                                                fontWeight: "bold",
+                                                fontSize: 15
+                                            }}>
+                                                Save
+                                            </ThemedText>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
                         )
                     }}
                 />
@@ -224,6 +295,16 @@ const EditBoxPage = () => {
                     <Ionicons name="add-circle" size={24} color={theme.primary} />
                     <ThemedText title={true} style={{ color: theme.primary }}>Edit Features</ThemedText>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.deleteButton, { borderColor: '#FF3B30' }]}
+                    onPress={handleDelete}
+                >
+                    <Ionicons name="trash" size={24} color="#FF3B30" />
+                    <ThemedText style={{ color: '#FF3B30', fontWeight: "bold" }}>Delete Box</ThemedText>
+                </TouchableOpacity>
+
+                <Spacer height={40} />
 
                 {/* ALTTAN ÇIKAN Features PANELİ */}
                 {isFeaturesVisible && (
@@ -470,6 +551,18 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 10,
         marginTop: 20
+    },
+    deleteButton: {
+        width: "85%",
+        borderWidth: 1.5,
+        borderStyle: "solid",
+        borderRadius: 15,
+        paddingVertical: 15,
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 10,
+        marginTop: 15,
     },
     bottomSheet: {
         position: 'absolute',

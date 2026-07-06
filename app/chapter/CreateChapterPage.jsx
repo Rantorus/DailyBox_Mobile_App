@@ -13,7 +13,7 @@ import ThemedCard from '../../components/ThemedCard';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
 import { useChapterStore } from '../../store/chapterStore';
 
 const CreateChapterPage = () => {
@@ -32,7 +32,9 @@ const CreateChapterPage = () => {
     // ZUSTAND STORE
     const chapters = useChapterStore((state) => state.chapters);
     const createChapter = useChapterStore((state) => state.createChapter);
+    const addBoxToChapter = useChapterStore((state) => state.addBoxToChapter);
     const isLoading = useChapterStore((state) => state.isLoading);
+    const boxes = useBoxStore((state) => state.boxes);
 
     // Component İçinde, State'lerin hemen altına şu useEffect'i ekle:
 useEffect(() => {
@@ -55,8 +57,8 @@ useEffect(() => {
     // Seçilen ID'lere göre gerçek kutu objelerini filtreleme
     const selectedBoxResults = useMemo(() => {
         if (selectedBoxes.length === 0) return [];
-        return dummyBoxes.filter((box) => selectedBoxes.includes(box.id));
-    }, [selectedBoxes]);
+        return boxes.filter((box) => selectedBoxes.includes(box.id));
+    }, [selectedBoxes, boxes]);
 
     async function handleSave() {
         if (title.trim() && description.trim() && type.trim()) {
@@ -65,10 +67,18 @@ useEffect(() => {
                 description: description.trim(),
                 type: type.trim(),
                 isFavorite: isFavorite
-                // selectedBoxes entegrasyonu kutular backende bağlanınca yapılacak
             });
 
             if (result.success) {
+                const chapterId = result.data.id;
+                
+                // Add all selected boxes to the chapter
+                if (selectedBoxes.length > 0) {
+                    for (const boxId of selectedBoxes) {
+                        await addBoxToChapter(chapterId, boxId);
+                    }
+                }
+
                 router.back();
             } else {
                 Alert.alert("Hata", result.error || "Chapter oluşturulamadı.");

@@ -8,7 +8,7 @@ import ThemedCard from '../../components/ThemedCard';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { dummyBoxes } from '../../fetchBox/dummyBoxes';
+import { useBoxStore } from '../../store/boxStore';
 import { CalendarList } from 'react-native-calendars';
 import { useRouter } from 'expo-router';
 
@@ -29,7 +29,9 @@ const CalendarPage = () => {
   const { themeName } = useTheme();
   const theme = Colors[themeName];
 
-  const filteredData = dummyBoxes.filter((item) => {
+  const boxes = useBoxStore((state) => state.boxes);
+
+  const filteredData = boxes.filter((item) => {
     return item.date.split('T')[0] === selectedDate;
   });
 
@@ -55,7 +57,7 @@ const CalendarPage = () => {
   function generateMarkedDates() {
     let marks = {};
 
-    dummyBoxes.forEach((item) => {
+    boxes.forEach((item) => {
       let strDate = item.date.split('T')[0];
       marks[strDate] = {
         marked: true,
@@ -212,7 +214,7 @@ const CalendarPage = () => {
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 {/* Listelenen kutuların tarih formatını güncelleyebilirsin, ancak orijinal veri split ile alındığı için böyle kaldı */}
                 <ThemedText>{formatDisplayDate(item.date.split('T')[0])}</ThemedText>
-                {item.isFavorite ? (
+                {item.is_favorite || item.isFavorite ? (
                   <Ionicons name="star" size={24} color={theme.primary} />
                 ) : (
                   <Ionicons name="star-outline" size={24} color={theme.border} />
@@ -225,7 +227,7 @@ const CalendarPage = () => {
         )}
         ListEmptyComponent={
           <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-            No records found for this date.
+            No boxes found for this date.
           </ThemedText>
         }
       />
