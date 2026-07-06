@@ -1,5 +1,5 @@
-import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity, Keyboard, TouchableWithoutFeedback, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Colors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemedView from '../../components/ThemedView';
@@ -15,7 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
-import { dummyChapters } from '../../fetchChapters/dummyChapters';
+import { useChapterStore } from '../../store/chapterStore';
 import Spacer from '../../components/Spacer';
 
 const ChaptersPage = () => {
@@ -25,6 +25,17 @@ const ChaptersPage = () => {
   const router = useRouter()
   const [isCreateCardVisible, setIsCreateCardVisible] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+
+  // ZUSTAND STORE
+  const chapters = useChapterStore((state) => state.chapters);
+  const isLoading = useChapterStore((state) => state.isLoading);
+  const error = useChapterStore((state) => state.error);
+  const fetchMyChapters = useChapterStore((state) => state.fetchMyChapters);
+
+  // SAYFA YÜKLENDİĞİNDE VERİLERİ ÇEK
+  useEffect(() => {
+    fetchMyChapters();
+  }, []);
 
   const [sortBy, setSortBy] = useState("new");
   const [tempSortBy, setTempSortBy] = useState('new');
@@ -38,9 +49,9 @@ const ChaptersPage = () => {
   // DİNAMİK TİP LİSTESİ ÇIKARMA
   // dummyBoxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
   const availableTypes = useMemo(() => {
-    const allTypes = dummyChapters.map(box => box.type);
+    const allTypes = chapters.map(box => box.type);
     return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş olanları temizler
-  }, []);
+  }, [chapters]);
 
   // ÇOKLU SEÇİM İÇİN YARDIMCI FONKSİYON (Kum havuzu için)
   const toggleTempType = (type) => {
@@ -55,12 +66,12 @@ const ChaptersPage = () => {
 
   // 3. İLK VERİ HAZIRLIĞI (Sonsuz döngüyü çözen useMemo yapısı)
   const filteredData = useMemo(() => {
-    return dummyChapters
+    return chapters
       .filter((data) => {
 
         // GERÇEK FAVORİ FİLTRESİ
         const favoriteMatch = showFavoritesOnly
-          ? data.isFavorite === true
+          ? data.is_favorite === true
           : true;
 
         const typeMatch = selectedTypes.length > 0
@@ -71,20 +82,20 @@ const ChaptersPage = () => {
       })
       .sort((a, b) => {
         switch (sortBy) {
-          case "new": return new Date(b.date) - new Date(a.date);
-          case "old": return new Date(a.date) - new Date(b.date);
+          case "new": return new Date(b.created_at || new Date()) - new Date(a.created_at || new Date());
+          case "old": return new Date(a.created_at || new Date()) - new Date(b.created_at || new Date());
           case "az": return a.title.localeCompare(b.title);
           case "za": return b.title.localeCompare(a.title);
           default: return 0;
         }
       });
-  }, [sortBy, showFavoritesOnly, selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+  }, [chapters, sortBy, showFavoritesOnly, selectedTypes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
 
   // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
   const { query, setQuery, results, loading } = useSearch(filteredData);
 
   // 5. ÖNİZLEME SAYACI (Filtre Paneli İçin)
-  const previewCount = dummyChapters.filter((item) => {
+  const previewCount = chapters.filter((item) => {
 
     // 2. Arama Filtresi: Arama çubuğundaki yazıyı HEM BAŞLIKTA HEM AÇIKLAMADA ara!
     const searchMatch = query
@@ -94,7 +105,7 @@ const ChaptersPage = () => {
 
     // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)
     const favoriteMatch = tempShowFavoritesOnly
-      ? item.isFavorite === true
+      ? item.is_favorite === true
       : true;
 
     const typeMatch = tempSelectedTypes.length > 0
@@ -138,11 +149,24 @@ const ChaptersPage = () => {
 
         <Spacer height={20} />
 
+        {error ? (
+          <ThemedText style={{ color: "red", textAlign: "center", margin: 20 }}>
+            {error}
+          </ThemedText>
+        ) : null}
+
         <FlatList
           data={results}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={fetchMyChapters}
+              tintColor={theme.primary}
+            />
+          }
           renderItem={({ item }) => (
             <Pressable onPress={() => router.push(`chapter/${item.id}`)}>
               <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
@@ -156,11 +180,11 @@ const ChaptersPage = () => {
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <ThemedText>
-                    {/* 2026-06-18 -> 18-06-2026 dönüşümü */}
-                    {item.date ? item.date.split('T')[0].split('-').reverse().join('-') : ''}
+                    {/* 2026-06-18T10:30:00Z -> 18-06-2026 dönüşümü */}
+                    {item.created_at ? item.created_at.split('T')[0].split('-').reverse().join('-') : ''}
                   </ThemedText>
 
-                  {item.isFavorite ? (
+                  {item.is_favorite ? (
                     <Ionicons name="star" size={24} color={theme.primary} />
                   ) : (
                     <Ionicons name="star-outline" size={24} color={theme.border} />
@@ -173,7 +197,7 @@ const ChaptersPage = () => {
           )}
           ListEmptyComponent={
             <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-              No records found for this date.
+              No records found.
             </ThemedText>
           }
         />

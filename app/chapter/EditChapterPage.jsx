@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, DeviceEventEmitter } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, DeviceEventEmitter, ActivityIndicator, Alert } from 'react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -15,9 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 // DUMMY DATA IMPORTLARI
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
-import { dummyChapters } from '../../fetchChapters/dummyChapters';
+import { useChapterStore } from '../../store/chapterStore';
 
-const CreateChapterPage = () => {
+const EditChapterPage = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
@@ -26,21 +26,18 @@ const CreateChapterPage = () => {
     // selectedBoxesValues'den şu anlık bir şey gelmiyor ilerde veri göndermem gerekirse diye şimdilik dursun
     const { chapterDataId, selectedBoxesValues } = useLocalSearchParams();
 
-    const chapterData = dummyChapters.find((data) => data.id == chapterDataId);
+    const chapters = useChapterStore((state) => state.chapters);
+    const updateChapter = useChapterStore((state) => state.updateChapter);
+    const deleteChapter = useChapterStore((state) => state.deleteChapter);
+    const isLoading = useChapterStore((state) => state.isLoading);
 
-    if (!chapterData) {
-        return (
-            <ThemedView safe={true} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ThemedText>Chapter not found or loading...</ThemedText>
-            </ThemedView>
-        );
-    }
+    const chapterData = chapters.find((data) => data.id === chapterDataId);
 
-    const [title, setTitle] = useState(chapterData.title);
-    const [description, setDescription] = useState(chapterData.description);
-    const [type, setType] = useState(chapterData.type);
+    const [title, setTitle] = useState(chapterData?.title || "");
+    const [description, setDescription] = useState(chapterData?.description || "");
+    const [type, setType] = useState(chapterData?.type || "");
     const [isTypesVisible, setIsTypesVisible] = useState(true);
-    const [isFavorite, setIsFavorite] = useState(chapterData.isFavorite);
+    const [isFavorite, setIsFavorite] = useState(chapterData?.is_favorite || false);
     const [isAddedBoxesVisible, setIsAddedBoxesVisible] = useState(false);
 
     const [selectedBoxes, setSelectedBoxes] = useState(() => {
@@ -74,9 +71,9 @@ const CreateChapterPage = () => {
 
     // Dinamik tip listesi çıkarma
     const availableTypes = useMemo(() => {
-        const allTypes = dummyChapters.map(box => box.type);
+        const allTypes = chapters.map(box => box.type);
         return [...new Set(allTypes)].filter(Boolean);
-    }, []);
+    }, [chapters]);
 
     const selectedBoxResults = useMemo(() => {
         // selectedBoxes undefined veya length'i 0 ise boş dizi dön
@@ -88,9 +85,57 @@ const CreateChapterPage = () => {
         return dummyBoxes.filter((box) => selectedBoxes.includes(box.id));
     }, [selectedBoxes]);
 
-    function handleSave() {
-       router.back();
+    if (!chapterData) {
+        return (
+            <ThemedView safe={true} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </ThemedView>
+        );
     }
+
+    async function handleSave() {
+        if (title.trim() && description.trim() && type.trim()) {
+            const result = await updateChapter(chapterDataId, {
+                title: title.trim(),
+                description: description.trim(),
+                type: type.trim(),
+                isFavorite: isFavorite
+            });
+
+            if (result.success) {
+                router.back();
+            } else {
+                Alert.alert("Hata", result.error || "Chapter güncellenemedi.");
+            }
+        } else {
+            Alert.alert("Eksik Bilgi", "Lütfen tüm alanları doldurun.");
+        }
+    }
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Chapter",
+            "Are you sure you want to delete this chapter? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        const result = await deleteChapter(chapterDataId);
+                        if (result.success) {
+                            // Alert kapandıktan hemen sonra route state'in toparlanması için ufak bir bekleme (Expo Router Bug Fix)
+                            setTimeout(() => {
+                                router.replace("/(dashboard)/ChaptersPage");
+                            }, 100);
+                        } else {
+                            Alert.alert("Hata", result.error || "Chapter silinemedi.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const handleRemoveBox = (boxIdToRemove) => {
         // Önceki state'i alıyoruz (prevBoxes)
@@ -115,11 +160,18 @@ const CreateChapterPage = () => {
                                     activeOpacity={0.7}
                                     onPress={() => handleSave()}
                                     style={[styles.editButton, { backgroundColor: theme.primary + '20' }]}
+                                    disabled={isLoading}
                                 >
-                                    <Ionicons name={"checkmark-outline"} size={20} color={theme.primary} />
-                                    <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
-                                        Save
-                                    </ThemedText>
+                                    {isLoading ? (
+                                        <ActivityIndicator size="small" color={theme.primary} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name={"checkmark-outline"} size={20} color={theme.primary} />
+                                            <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
+                                                Save
+                                            </ThemedText>
+                                        </>
+                                    )}
                                 </TouchableOpacity>
                             )
                         }}
@@ -231,12 +283,23 @@ const CreateChapterPage = () => {
 
                     {/* KUTU EKLEME SAYFASINA GEÇİŞ BUTONU */}
                     <TouchableOpacity
-                        style={[styles.addsButton, { borderColor: theme.primary }]}
+                        style={[styles.addsButton, { borderColor: theme.primary, marginBottom: 15 }]}
                         onPress={() => router.push("/chapter/AddBoxesToChapter")}
                     >
                         <Ionicons name="add-circle" size={24} color={theme.primary} />
                         <ThemedText style={{ color: theme.primary, fontWeight: "bold" }}>Add Box</ThemedText>
                     </TouchableOpacity>
+
+                    {/* CHAPTER SİLME BUTONU */}
+                    <TouchableOpacity
+                        style={[styles.deleteChapterButton, { borderColor: '#FF3B30' }]}
+                        onPress={handleDelete}
+                    >
+                        <Ionicons name="trash" size={24} color="#FF3B30" />
+                        <ThemedText style={{ color: '#FF3B30', fontWeight: "bold" }}>Delete Chapter</ThemedText>
+                    </TouchableOpacity>
+
+                    <Spacer height={40} />
 
                 </ThemedView>
             </TouchableWithoutFeedback>
@@ -309,7 +372,7 @@ const CreateChapterPage = () => {
     );
 };
 
-export default CreateChapterPage;
+export default EditChapterPage;
 
 const styles = StyleSheet.create({
     container: {
@@ -379,6 +442,17 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 10,
         marginBottom: 15
+    },
+    deleteChapterButton: {
+        width: "85%",
+        borderWidth: 1.5,
+        borderStyle: "solid",
+        borderRadius: 15,
+        paddingVertical: 15,
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 10,
     },
     bottomSheet: {
         position: 'absolute',

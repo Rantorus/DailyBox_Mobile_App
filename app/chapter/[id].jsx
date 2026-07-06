@@ -1,4 +1,4 @@
-import { FlatList, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import React from 'react';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -9,7 +9,7 @@ import ThemedText from '../../components/ThemedText';
 import Spacer from '../../components/Spacer';
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
-import { dummyChapters } from '../../fetchChapters/dummyChapters';
+import { useChapterStore } from '../../store/chapterStore';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -23,20 +23,20 @@ const ChapterDetail = () => {
 
     const router = useRouter();
 
-
-    const chapterData = dummyChapters.find((data) => data.id === id);
+    const chapters = useChapterStore((state) => state.chapters);
+    const chapterData = chapters.find((data) => data.id === id);
 
     // Eğer veri bulunamazsa çökmeyi önleyen güvenlik kontrolü
     if (!chapterData) {
         return (
             <ThemedView safe={true} style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ThemedText>Chapter not found.</ThemedText>
+                <ActivityIndicator size="large" color={theme.primary} />
             </ThemedView>
         );
     }
 
     //BU ALBÜMÜN İÇİNDEKİ KUTULARI (BOXES) FİLTRELE
-    const includedBoxes = dummyBoxes.filter(box => chapterData.boxIds.includes(box.id));
+    const includedBoxes = dummyBoxes.filter(box => (chapterData.boxIds || []).includes(box.id));
 
     return (
         <ThemedView safe={true} style={styles.container}>
@@ -86,7 +86,7 @@ const ChapterDetail = () => {
                 {/* Yıldız İkonu (Sağ üst köşeye sabitlendi) */}
                 <View style={{ position: "absolute", top: 5, right: 5 }}>
                     <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Favori tıklandı")}>
-                        {chapterData.isFavorite ? (
+                        {chapterData.is_favorite ? (
                             <Ionicons name="star" size={24} color={theme.primary} /> // Favori rengi genelde altın/sarı olur
                         ) : (
                             <Ionicons name="star-outline" size={24} color={theme.border} />
@@ -96,8 +96,8 @@ const ChapterDetail = () => {
 
                 <Spacer height={25} />
                 <View style={styles.typeDateBar}>
-                    <ThemedText>Type: {chapterData.type}</ThemedText>
-                    <ThemedText>Date: {chapterData.date ? chapterData.date.split('T')[0].split('-').reverse().join('-') : ''}</ThemedText>
+                    <ThemedText>Type: {chapterData.type || 'General'}</ThemedText>
+                    <ThemedText>Date: {chapterData.created_at ? chapterData.created_at.split('T')[0].split('-').reverse().join('-') : ''}</ThemedText>
                 </View>
                 <Spacer height={25} />
                 <ThemedText style={styles.descriptionText}>Description: {chapterData.description}</ThemedText>

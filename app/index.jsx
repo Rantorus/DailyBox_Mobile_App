@@ -15,7 +15,8 @@ import { dummyUsers } from '../fetchUser/userInfo.js'
 
 // 1. OLUŞTURDUĞUMUZ STORE'U İÇERİ AKTAR
 import { useUserStore } from '../store/useStore.jsx'
-
+import { getCredentials } from '../services/tokenService';
+import GuestOnly from '../auth/GuestOnly.jsx';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 const index = () => {
@@ -28,9 +29,10 @@ const index = () => {
 
     const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
     const activeUser = useUserStore(state => state.activeUser);
+    const isAuthChecking = useUserStore(state => state.isAuthChecking);
 
-    const [email, setEmail] = useState('test@gmail.com')
-    const [password, setPassword] = useState('Test123')
+    const [email, setEmail] = useState('karnassuleyman01@gmail.com')
+    const [password, setPassword] = useState('adminPassword123')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
 
@@ -41,7 +43,7 @@ const index = () => {
         if (params.registeredEmail || params.registeredPassword) {
             if (params.registeredEmail) setEmail(params.registeredEmail);
             if (params.registeredPassword) setPassword(params.registeredPassword);
-            
+
             // Parametreleri temizliyoruz ki kullanıcı sonradan bu alanları silebilsin veya değiştirebilsin.
             // Aksi takdirde Expo Router her render'da bu verileri geri yazar.
             router.setParams({ registeredEmail: '', registeredPassword: '' });
@@ -57,12 +59,7 @@ const index = () => {
         }
     }, [error]);
 
-    // useEffect — sayfa açılınca kontrol et
-    useEffect(() => {
-        if (isBiometricEnabled && activeUser) {
-            handleBiometricLogin();
-        }
-    }, []);
+    // Biyometrik girişi otomatik tetiklemiyoruz, kullanıcı butona basarak tetikleyecek.
 
     async function handleLogin() {
         if (!email.trim() || !password.trim()) {
@@ -71,7 +68,7 @@ const index = () => {
         }
 
         setIsLoading(true);
-        
+
         // Gerçek Backend API'sine İstek Atar
         const result = await login(email.trim(), password.trim());
 
@@ -84,6 +81,12 @@ const index = () => {
     }
 
     const handleBiometricLogin = async () => {
+        const creds = await getCredentials();
+        if (!creds) {
+            setError("Kayıtlı kimlik bilgisi bulunamadı. Lütfen önce şifrenizle giriş yapın.");
+            return;
+        }
+
         const result = await LocalAuthentication.authenticateAsync({
             promptMessage: 'Parmak izi veya Face ID ile giriş yap',
             cancelLabel: 'Şifre ile gir',
@@ -91,10 +94,22 @@ const index = () => {
         });
 
         if (result.success) {
-            router.replace('CalendarPage');
+            setIsLoading(true);
+            const loginResult = await login(creds.email, creds.password);
+
+            if (loginResult.success) {
+                router.replace('CalendarPage');
+            } else {
+                setError(loginResult.error || 'Giriş başarısız oldu, şifreniz değişmiş olabilir.');
+                setIsLoading(false);
+            }
         }
-        // Başarısız olursa normal login ekranı kalır
     };
+
+    // Auth kontrolünü artık GuestOnly yapıyor
+    // if (isAuthChecking || activeUser) {
+    //     return null; 
+    // }
 
     if (isLoading) {
         return (
@@ -105,70 +120,72 @@ const index = () => {
     }
 
     return (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ThemedView style={styles.container}>
-                <Spacer height={40} />
-                <ThemedText title={true} style={styles.title}>
-                    Login to Your Account
-                </ThemedText>
-                <Spacer height={150} />
+        <GuestOnly>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ThemedView style={styles.container}>
+                    <Spacer height={40} />
+                    <ThemedText title={true} style={styles.title}>
+                        Login to Your Account
+                    </ThemedText>
+                    <Spacer height={150} />
 
-                <ThemedInput
-                    style={{ width: "80%", marginBottom: 20 }}
-                    placeholder="Email"
-                    placeholderTextColor={theme.textLight}
-                    keyboardType="email-address"
-                    onChangeText={setEmail}
-                    value={email}
-                />
+                    <ThemedInput
+                        style={{ width: "80%", marginBottom: 20 }}
+                        placeholder="Email"
+                        placeholderTextColor={theme.textLight}
+                        keyboardType="email-address"
+                        onChangeText={setEmail}
+                        value={email}
+                    />
 
-                <ThemedInput
-                    style={{ width: "80%", marginBottom: 20 }}
-                    placeholder="Password"
-                    placeholderTextColor={theme.textLight}
-                    onChangeText={setPassword}
-                    value={password}
-                    secureTextEntry
-                />
+                    <ThemedInput
+                        style={{ width: "80%", marginBottom: 20 }}
+                        placeholder="Password"
+                        placeholderTextColor={theme.textLight}
+                        onChangeText={setPassword}
+                        value={password}
+                        secureTextEntry
+                    />
 
-                {error !== '' && (
-                    <>
-                        <Spacer height={10} />
-                        <ThemedText style={{ color: "red", fontSize: 16 }}>
-                            {error}
-                        </ThemedText>
-                        <Spacer height={15} />
-                    </>
-                )}
+                    {error !== '' && (
+                        <>
+                            <Spacer height={10} />
+                            <ThemedText style={{ color: "red", fontSize: 16 }}>
+                                {error}
+                            </ThemedText>
+                            <Spacer height={15} />
+                        </>
+                    )}
 
-                <ThemedBtn onPress={() => handleLogin()}>
-                    <ThemedText style={{ color: "white" }} title={true} >Login</ThemedText>
-                </ThemedBtn>
+                    <ThemedBtn onPress={() => handleLogin()}>
+                        <ThemedText style={{ color: "white" }} title={true} >Login</ThemedText>
+                    </ThemedBtn>
 
-                {isBiometricEnabled && (
-                    <TouchableOpacity
-                        onPress={handleBiometricLogin}
-                        style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-                    >
-                        <Ionicons name="finger-print" size={24} color={theme.primary} />
-                        <ThemedText style={{ color: theme.primary, fontWeight: 'bold' }}>
-                            Parmak izi ile giriş yap
+                    {isBiometricEnabled && (
+                        <TouchableOpacity
+                            onPress={handleBiometricLogin}
+                            style={{ marginTop: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                        >
+                            <Ionicons name="finger-print" size={24} color={theme.primary} />
+                            <ThemedText style={{ color: theme.primary, fontWeight: 'bold' }}>
+                                Parmak izi ile giriş yap
+                            </ThemedText>
+                        </TouchableOpacity>
+                    )}
+
+                    <Spacer height={20} />
+
+                    <TouchableOpacity onPress={() => router.push('register')}>
+                        <ThemedText style={{ fontSize: 14 }}>
+                            Don't have an account?{' '}
+                            <ThemedText title={true} style={{ fontSize: 14, textDecorationLine: 'underline' }}>
+                                Register
+                            </ThemedText>
                         </ThemedText>
                     </TouchableOpacity>
-                )}
-
-                <Spacer height={20} />
-
-                <TouchableOpacity onPress={() => router.push('register')}>
-                    <ThemedText style={{ fontSize: 14 }}>
-                        Don't have an account?{' '}
-                        <ThemedText title={true} style={{ fontSize: 14, textDecorationLine: 'underline' }}>
-                            Register
-                        </ThemedText>
-                    </ThemedText>
-                </TouchableOpacity>
-            </ThemedView>
-        </TouchableWithoutFeedback>
+                </ThemedView>
+            </TouchableWithoutFeedback>
+        </GuestOnly>
     )
 }
 

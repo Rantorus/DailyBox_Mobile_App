@@ -11,6 +11,7 @@ import { Colors } from '../constants/Colors'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import { useRouter } from 'expo-router'
 import { useUserStore } from '../store/useStore.jsx'
+import GuestOnly from '../auth/GuestOnly.jsx'
 
 const Register = () => {
     const router = useRouter();
@@ -83,6 +84,7 @@ const Register = () => {
     }
 
     return (
+        <GuestOnly>
         <KeyboardAwareScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1 }}
@@ -172,6 +174,7 @@ const Register = () => {
             </ThemedView>
         </TouchableWithoutFeedback>
     </KeyboardAwareScrollView>
+    </GuestOnly>
 )
 }
 

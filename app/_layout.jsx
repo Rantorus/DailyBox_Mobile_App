@@ -1,16 +1,27 @@
 import { StyleSheet } from 'react-native'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { Colors } from '../constants/Colors'
 
 // Hem Provider'ı hem de hook'u import ediyoruz
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext"
+import { useUserStore } from "../store/useStore"
 
 // 1. İÇ BİLEŞEN
 const InnerLayout = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
+    const initBiometricSetting = useUserStore(state => state.initBiometricSetting);
+    const checkAuth = useUserStore(state => state.checkAuth);
+
+    useEffect(() => {
+        const initApp = async () => {
+            await initBiometricSetting();
+            await checkAuth();
+        };
+        initApp();
+    }, []);
 
     return (
         <>
@@ -20,8 +31,8 @@ const InnerLayout = () => {
                 headerTintColor: theme.text
             }}>
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
-                <Stack.Screen name="index" options={{ title: "Daily Box" }} />
-                <Stack.Screen name="register" options={{ title: "Register" }} />
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="register" options={{ headerShown: false }} />
 
                 {/* ✅ TÜM MODÜLLER KENDİ KLASÖRLERİNE (LAYOUTLARINA) YÖNLENDİRİLDİ */}
                 <Stack.Screen name="box" options={{ headerShown: false }} />

@@ -10,7 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
-import { dummyChapters } from "../../fetchChapters/dummyChapters";
+import { useChapterStore } from '../../store/chapterStore';
 
 // Global Store'lar
 import { useMediaStore } from '../../store/mediaStore';
@@ -55,8 +55,10 @@ export default function ProfilePage() {
   const activeUserName = activeUser?.name || activeUser?.fullName || "Bilinmeyen Kullanıcı";
   const activeUserEmail = activeUser?.email || "E-posta bulunamadı";
 
+  const chapters = useChapterStore((state) => state.chapters);
+  
   const boxesCount = dummyBoxes?.length || 0;
-  const chaptersCount = dummyChapters?.length || 0;
+  const chaptersCount = chapters?.length || 0;
   const logsCount = dummyBoxes?.filter(box => box.category === 'log').length || 0;
   const plansCount = dummyBoxes?.filter(box => box.category === 'plan').length || 0;
 

@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Colors } from "../../constants/Colors";
 import { useTheme } from "../../contexts/ThemeContext";
+import UserOnly from "../../auth/UserOnly";
 
 const ICON_SIZE = 24;
 
@@ -14,7 +15,7 @@ const DashboardLayout = () => {
     const theme = Colors[themeName]
 
     return (
-        
+        <UserOnly>
             <Tabs
                 screenOptions={{
                     headerShown: false,
@@ -67,7 +68,7 @@ const DashboardLayout = () => {
                 }} />
 
             </Tabs>
-
+        </UserOnly>
     )
 }
 

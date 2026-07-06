@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, DeviceEventEmitter } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, DeviceEventEmitter, ActivityIndicator, Alert } from 'react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -13,9 +13,8 @@ import ThemedCard from '../../components/ThemedCard';
 
 import { Ionicons } from '@expo/vector-icons';
 
-// DUMMY DATA IMPORTLARI
 import { dummyBoxes } from '../../fetchBox/dummyBoxes';
-import { dummyChapters } from '../../fetchChapters/dummyChapters';
+import { useChapterStore } from '../../store/chapterStore';
 
 const CreateChapterPage = () => {
     const { themeName } = useTheme();
@@ -29,6 +28,11 @@ const CreateChapterPage = () => {
     const [isFavorite, setIsFavorite] = useState(false);
     const [selectedBoxes, setSelectedBoxes] = useState([]);
     const [isAddedBoxesVisible, setIsAddedBoxesVisible] = useState(false);
+
+    // ZUSTAND STORE
+    const chapters = useChapterStore((state) => state.chapters);
+    const createChapter = useChapterStore((state) => state.createChapter);
+    const isLoading = useChapterStore((state) => state.isLoading);
 
     // Component İçinde, State'lerin hemen altına şu useEffect'i ekle:
 useEffect(() => {
@@ -44,9 +48,9 @@ useEffect(() => {
 
     // Dinamik tip listesi çıkarma
     const availableTypes = useMemo(() => {
-        const allTypes = dummyChapters.map(box => box.type);
+        const allTypes = chapters.map(box => box.type);
         return [...new Set(allTypes)].filter(Boolean);
-    }, []);
+    }, [chapters]);
 
     // Seçilen ID'lere göre gerçek kutu objelerini filtreleme
     const selectedBoxResults = useMemo(() => {
@@ -54,11 +58,23 @@ useEffect(() => {
         return dummyBoxes.filter((box) => selectedBoxes.includes(box.id));
     }, [selectedBoxes]);
 
-    function handleSave() {
+    async function handleSave() {
         if (title.trim() && description.trim() && type.trim()) {
-            console.log("Saved Data: ", { title, description, type, isFavorite, selectedBoxes });
+            const result = await createChapter({
+                title: title.trim(),
+                description: description.trim(),
+                type: type.trim(),
+                isFavorite: isFavorite
+                // selectedBoxes entegrasyonu kutular backende bağlanınca yapılacak
+            });
+
+            if (result.success) {
+                router.back();
+            } else {
+                Alert.alert("Hata", result.error || "Chapter oluşturulamadı.");
+            }
         } else {
-            console.log("bos deger var");
+            Alert.alert("Eksik Bilgi", "Lütfen tüm alanları doldurun.");
         }
     }
 
@@ -77,11 +93,18 @@ useEffect(() => {
                                     activeOpacity={0.7}
                                     onPress={() => handleSave()}
                                     style={[styles.editButton, { backgroundColor: theme.primary + '20' }]}
+                                    disabled={isLoading}
                                 >
-                                    <Ionicons name={"checkmark-outline"} size={20} color={theme.primary} />
-                                    <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
-                                        Create
-                                    </ThemedText>
+                                    {isLoading ? (
+                                        <ActivityIndicator size="small" color={theme.primary} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name={"checkmark-outline"} size={20} color={theme.primary} />
+                                            <ThemedText style={{ color: theme.primary, fontWeight: "bold", fontSize: 15 }}>
+                                                Create
+                                            </ThemedText>
+                                        </>
+                                    )}
                                 </TouchableOpacity>
                             )
                         }}
