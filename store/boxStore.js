@@ -7,6 +7,22 @@ export const useBoxStore = create((set, get) => ({
     isLoading: false,
     error: null,
 
+    // Draft features for CreateBoxPage (where boxId doesn't exist yet)
+    draftFeatures: {
+        note: null, // { title, content }
+        todo: null, 
+        location: null,
+        media: null
+    },
+
+    setDraftFeature: (key, value) => set((state) => ({ 
+        draftFeatures: { ...state.draftFeatures, [key]: value } 
+    })),
+    
+    clearDraftFeatures: () => set({ 
+        draftFeatures: { note: null, todo: null, location: null, media: null } 
+    }),
+
     // 1. Kullanıcının tüm chapter'larını çek (GET /api/chapters)
     fetchMyBoxes: async () => {
         set({ isLoading: true, error: null });

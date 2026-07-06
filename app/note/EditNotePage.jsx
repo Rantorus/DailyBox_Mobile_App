@@ -35,8 +35,8 @@ const EditNotePage = () => {
         );
     }
 
-    const [title, setTitle] = useState(boxData.note_title || boxData.note?.title || "");
-    const [content, setContent] = useState(boxData.note_content || boxData.note?.content || "");
+    const [title, setTitle] = useState(boxData.note_title || boxData.noteTitle || boxData.note?.title || "");
+    const [content, setContent] = useState(boxData.note_content || boxData.noteContent || boxData.note?.content || "");
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [selectedColor, setSelectedColor] = useState(theme.text); // Sadece bu state yeterli

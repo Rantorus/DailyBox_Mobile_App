@@ -9,9 +9,11 @@ import {
     Platform,
 } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Alert } from 'react-native';
+import { useBoxStore } from '../../store/boxStore';
 
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -23,9 +25,15 @@ const CreateNotePage = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
+    const { boxId } = useLocalSearchParams();
 
-    const [title, setTitle] = useState("");
-    const [content, setContent] = useState("");
+    const updateBox = useBoxStore(state => state.updateBox);
+    const setDraftFeature = useBoxStore(state => state.setDraftFeature);
+
+    const draftFeatures = useBoxStore(state => state.draftFeatures);
+
+    const [title, setTitle] = useState(!boxId && draftFeatures.note ? draftFeatures.note.title : "");
+    const [content, setContent] = useState(!boxId && draftFeatures.note ? draftFeatures.note.content : "");
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
     const [selectedColor, setSelectedColor] = useState(theme.text); // Sadece bu state yeterli
@@ -50,12 +58,23 @@ const CreateNotePage = () => {
         };
     }, []);
 
-    function handleSave() {
+    async function handleSave() {
         if (title.trim() && content.trim()) {
-            console.log("Saved Note:", { title, content, isBold, isItalic, selectedColor });
-            router.back();
+            if (boxId) {
+                // Kutunun var olduğu senaryo (EditBoxPage'den geldiyse)
+                const result = await updateBox(boxId, { hasNote: true, noteTitle: title, noteContent: content });
+                if (result.success) {
+                    router.back();
+                } else {
+                    Alert.alert("Hata", result.error || "Not kaydedilemedi.");
+                }
+            } else {
+                // Kutu henüz oluşturulmadıysa, drafta at (CreateBoxPage'den geldiyse)
+                setDraftFeature('note', { title, content });
+                router.back();
+            }
         } else {
-            console.log("Başlık veya içerik boş olamaz.");
+            Alert.alert("Eksik Bilgi", "Başlık veya içerik boş olamaz.");
         }
     }
 

@@ -37,14 +37,37 @@ const EditBoxPage = () => {
     const [type, setType] = useState(boxData?.type || "");
     const [isTypesVisible, setIsTypesVisible] = useState(true);
     const [isFavorite, setIsFavorite] = useState(boxData?.is_favorite || boxData?.isFavorite || false);
+    // UI stateleri (Features menüsü açık mı kapalı mı)
     const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
 
-    const [isAlreadyAdedNotes, setIsAlreadyAdedNotes] = useState(boxData?.has_note || false);
-    const [isAlreadyAdedTodos, setIsAlreadyAdedTodos] = useState(boxData?.has_todos || false); // Backend'de has_todos var mı? DB'de yok ama neyse
-    const [isAlreadyAdedLocation, setIsAlreadyAdedLocation] = useState(boxData?.has_location || false);
-    const [isAlreadyAdedMedia, setIsAlreadyAdedMedia] = useState(boxData?.has_media || false);
-
     const router = useRouter();
+
+    // Veritabanındaki has_* bayraklarını kullanarak özelliklerin ekli olup olmadığını anlıyoruz
+    const hasNote = boxData?.has_note || false;
+    const hasLocation = boxData?.has_location || false;
+    const hasMedia = boxData?.has_media || false;
+    // Todo tablosu ayrı olduğu için has_todos DB'de yok ama var kabul edelim
+    const hasTodos = boxData?.has_todos || false;
+
+    const handleDeleteFeature = async (featureType) => {
+        let updatePayload = {};
+        if (featureType === 'note') {
+            updatePayload = { hasNote: false, noteTitle: null, noteContent: null };
+        } else if (featureType === 'location') {
+            updatePayload = { hasLocation: false, locationAddress: null, locationLat: null, locationLng: null };
+        } else if (featureType === 'media') {
+            updatePayload = { hasMedia: false, mediaPhotos: [], mediaDocs: [], mediaAudio: [] };
+        } else if (featureType === 'todos') {
+            // Todos are in a separate table, but we can set a flag or just alert
+            Alert.alert("Info", "Todos must be deleted individually inside the Todo screen.");
+            return;
+        }
+
+        const result = await updateBox(boxDataId, updatePayload);
+        if (!result.success) {
+            Alert.alert("Hata", result.error || "Özellik silinemedi.");
+        }
+    };
 
     // Gelen tarihi güvenli bir şekilde DD-MM-YYYY formatına çevirir
     const formatInputDate = (val) => {
@@ -78,15 +101,31 @@ const EditBoxPage = () => {
         if (title.trim() && description.trim() && dateValue.trim() && type.trim()) {
             let parsedDate;
             try {
-                if (dateValue.includes('-') && dateValue.split('-')[0].length !== 4) {
-                     const parts = dateValue.split('-');
-                     parsedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`).toISOString();
+                let normalizedDate = dateValue.replace(/\./g, '-');
+                if (normalizedDate.includes('-') && normalizedDate.split('-')[0].length !== 4) {
+                     const parts = normalizedDate.split('-');
+                     parsedDate = `${parts[2]}-${parts[1]}-${parts[0]}T12:00:00.000Z`;
                 } else {
-                     parsedDate = new Date(dateValue).toISOString();
+                     const parts = normalizedDate.split('-');
+                     parsedDate = `${parts[0]}-${parts[1]}-${parts[2]}T12:00:00.000Z`;
                 }
             } catch (e) {
-                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD)");
+                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD veya GG.AA.YYYY)");
                  return;
+            }
+
+            // Kategoriye göre tarih doğrulaması (Log = geçmiş/bugün, Plan = gelecek/bugün)
+            const today = new Date();
+            const todayString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+            const selectedDateString = parsedDate.split('T')[0];
+            const currentCategory = boxData.category || "log";
+
+            if (currentCategory === "log" && selectedDateString > todayString) {
+                Alert.alert("Geçersiz Tarih", "Gelecekten bir tarih girilemez. Lütfen plan kutusu (Plan) oluşturun veya bugün/geçmiş bir tarih girin.");
+                return;
+            } else if (currentCategory === "plan" && selectedDateString < todayString) {
+                Alert.alert("Geçersiz Tarih", "Geçmişten bir tarih girilemez. Lütfen log kutusu (Log) oluşturun veya bugün/gelecek bir tarih girin.");
+                return;
             }
 
             const updateData = {
@@ -323,19 +362,21 @@ const EditBoxPage = () => {
                             {/* AYIRICI ÇİZGİ */}
                             <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
 
-                            <ThemedText title={true}>Added Features</ThemedText>
+                            { (hasNote || hasTodos || hasLocation || hasMedia) && (
+                                <ThemedText title={true}>Added Features</ThemedText>
+                            )}
 
                             {/* --- NOTES --- */}
-                            {isAlreadyAdedNotes && (
+                            {hasNote && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Note")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/note/EditNotePage', params: { boxId: boxDataId } })}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="document-text" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
                                             <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                                Aded Notes
+                                                Added Notes
                                             </ThemedText>
-                                            <Ionicons onPress={() => setIsAlreadyAdedNotes(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                            <Ionicons onPress={() => handleDeleteFeature('note')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
                                         </ThemedCard>
                                     </TouchableOpacity>
                                     <Spacer height={5} />
@@ -343,16 +384,16 @@ const EditBoxPage = () => {
                             )}
 
                             {/* --- TODOS --- */}
-                            {isAlreadyAdedTodos && (
+                            {hasTodos && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Checklist")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/todo/EditTodoPage', params: { boxId: boxDataId } })}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
                                             <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                                Aded Todos
+                                                Added Todos
                                             </ThemedText>
-                                            <Ionicons onPress={() => setIsAlreadyAdedTodos(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                            <Ionicons onPress={() => handleDeleteFeature('todos')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
                                         </ThemedCard>
                                     </TouchableOpacity>
                                     <Spacer height={5} />
@@ -360,16 +401,16 @@ const EditBoxPage = () => {
                             )}
 
                             {/* --- LOCATION --- */}
-                            {isAlreadyAdedLocation && (
+                            {hasLocation && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Location")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/location/EditLocationPage', params: { boxId: boxDataId } })}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="location" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
                                             <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                                Aded Location
+                                                Added Location
                                             </ThemedText>
-                                            <Ionicons onPress={() => setIsAlreadyAdedLocation(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                            <Ionicons onPress={() => handleDeleteFeature('location')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
                                         </ThemedCard>
                                     </TouchableOpacity>
                                     <Spacer height={5} />
@@ -377,32 +418,35 @@ const EditBoxPage = () => {
                             )}
 
                             {/* --- MEDIA --- */}
-                            {isAlreadyAdedMedia && (
+                            {hasMedia && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Delete Media")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/media/edit/EditPhotoPage', params: { boxId: boxDataId } })}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
                                             <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                                Aded Media
+                                                Added Media
                                             </ThemedText>
-                                            <Ionicons onPress={() => setIsAlreadyAdedMedia(false)} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                            <Ionicons onPress={() => handleDeleteFeature('media')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
                                         </ThemedCard>
                                     </TouchableOpacity>
                                     <Spacer height={5} />
                                 </>
                             )}
 
-                            <Spacer height={15} />
-                            {/* AYIRICI ÇİZGİ */}
-                            <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
+                            {(hasNote || hasTodos || hasLocation || hasMedia) && (
+                                <>
+                                    <Spacer height={15} />
+                                    <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
+                                </>
+                            )}
 
                             <ThemedText title={true}>Available Features</ThemedText>
 
                             {/* --- NOTES --- */}
-                            {!isAlreadyAdedNotes && (
+                            {!hasNote && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Note")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/note/CreateNotePage', params: { boxId: boxDataId } }); }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="document-text" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -417,9 +461,9 @@ const EditBoxPage = () => {
                             )}
 
                             {/* --- TODOS --- */}
-                            {!isAlreadyAdedTodos && (
+                            {!hasTodos && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Checklist")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/todo/CreateTodo', params: { boxId: boxDataId } }); }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -434,9 +478,9 @@ const EditBoxPage = () => {
                             )}
 
                             {/* --- LOCATION --- */}
-                            {!isAlreadyAdedLocation && (
+                            {!hasLocation && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Location")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/location/UploadLocation', params: { boxId: boxDataId } }); }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="location" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -451,9 +495,9 @@ const EditBoxPage = () => {
                             )}
 
                             {/* --- MEDIA --- */}
-                            {!isAlreadyAdedMedia && (
+                            {!hasMedia && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Add Media")}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/media/create/UploadPhoto', params: { boxId: boxDataId } }); }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />

@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, Dimensions } from 'react-native';
 import React, { useMemo, useState } from 'react';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -15,27 +15,56 @@ import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useBoxStore } from '../../store/boxStore';
-import { Alert, ActivityIndicator } from 'react-native';
+import { Alert, ActivityIndicator, Modal } from 'react-native';
+import { CalendarList } from 'react-native-calendars';
 
 const CreateBoxPage = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
+    const { category, date } = useLocalSearchParams();
+    const router = useRouter();
+
+    const formatInitialDate = (val) => {
+        if (!val) return '';
+        let cleanDate = val.split('T')[0];
+        if (cleanDate.includes('-') && cleanDate.split('-')[0].length === 4) {
+            return cleanDate.split('-').reverse().join('.');
+        }
+        return cleanDate;
+    };
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [dateValue, setDateValue] = useState("");
+    const [dateValue, setDateValue] = useState(date ? formatInitialDate(date) : "");
     const [type, setType] = useState("");
     const [isTypesVisible, setIsTypesVisible] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
+    const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+    const [calendarCurrent, setCalendarCurrent] = useState(new Date().toISOString().split('T')[0]);
+    const [calKey, setCalKey] = useState('cal-create-initial');
+    const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
 
-    const router = useRouter();
-
-    const { category, date } = useLocalSearchParams();
+    const calScreenWidth = Dimensions.get('window').width * 0.85 - 40; // modal width minus padding
 
     const boxes = useBoxStore(state => state.boxes);
     const createBox = useBoxStore(state => state.createBox);
     const isLoading = useBoxStore(state => state.isLoading);
+    
+    // Draft Features
+    const draftFeatures = useBoxStore(state => state.draftFeatures);
+    const setDraftFeature = useBoxStore(state => state.setDraftFeature);
+    const clearDraftFeatures = useBoxStore(state => state.clearDraftFeatures);
+
+    const hasNote = !!draftFeatures.note;
+    const hasLocation = !!draftFeatures.location;
+    const hasMedia = !!draftFeatures.media;
+    const hasTodos = !!draftFeatures.todo;
+
+    const handleDeleteFeature = (featureType) => {
+        setDraftFeature(featureType, null);
+    };
 
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
     const availableTypes = useMemo(() => {
@@ -49,16 +78,35 @@ const CreateBoxPage = () => {
             // Kullanıcı "2026-06-18" girdiyse onu Date objesine çeviriyoruz. Eğer parse edilemiyorsa exception atabilir, o yüzden dikkatli olmalıyız.
             let parsedDate;
             try {
-                // Eğer GG-AA-YYYY girdiyse
-                if (dateValue.includes('-') && dateValue.split('-')[0].length !== 4) {
-                     const parts = dateValue.split('-');
-                     parsedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`).toISOString();
+                // GG.AA.YYYY veya YYYY-MM-DD
+                let normalizedDate = dateValue.replace(/\./g, '-');
+                if (normalizedDate.includes('-') && normalizedDate.split('-')[0].length !== 4) {
+                     // GG-AA-YYYY formatı
+                     const parts = normalizedDate.split('-');
+                     // 12:00:00Z ekliyoruz ki yerel saat dilimi (TR: +3) sebebiyle bir önceki güne (21:00) atmasın.
+                     parsedDate = `${parts[2]}-${parts[1]}-${parts[0]}T12:00:00.000Z`;
                 } else {
-                     parsedDate = new Date(dateValue).toISOString();
+                     // YYYY-MM-DD formatı
+                     const parts = normalizedDate.split('-');
+                     parsedDate = `${parts[0]}-${parts[1]}-${parts[2]}T12:00:00.000Z`;
                 }
             } catch (e) {
-                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD)");
+                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD veya GG.AA.YYYY)");
                  return;
+            }
+
+            // Kategoriye göre tarih doğrulaması (Log = geçmiş/bugün, Plan = gelecek/bugün)
+            const today = new Date();
+            const todayString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+            const selectedDateString = parsedDate.split('T')[0];
+            const currentCategory = category || "log";
+
+            if (currentCategory === "log" && selectedDateString > todayString) {
+                Alert.alert("Geçersiz Tarih", "Gelecekten bir tarih girilemez. Lütfen plan kutusu (Plan) oluşturun veya bugün/geçmiş bir tarih girin.");
+                return;
+            } else if (currentCategory === "plan" && selectedDateString < todayString) {
+                Alert.alert("Geçersiz Tarih", "Geçmişten bir tarih girilemez. Lütfen log kutusu (Log) oluşturun veya bugün/gelecek bir tarih girin.");
+                return;
             }
 
             const boxData = {
@@ -68,11 +116,23 @@ const CreateBoxPage = () => {
                 type: type.trim(),
                 isFavorite: isFavorite,
                 category: category || "log", // URL params'dan gelen category
+
+                // Attach drafted features for backend
+                hasNote: hasNote,
+                ...(hasNote ? { noteTitle: draftFeatures.note.title, noteContent: draftFeatures.note.content } : {}),
+                hasLocation: hasLocation,
+                ...(hasLocation ? draftFeatures.location : {}),
+                hasMedia: hasMedia,
+                ...(hasMedia ? draftFeatures.media : {}),
             };
 
             const result = await createBox(boxData);
             if (result.success) {
-                router.back();
+                // TODO: If hasTodos is true, create todos separately using the returned box id: result.data.id
+                clearDraftFeatures();
+                // Geri dönmek yerine detay sayfasına replace (yerine koyarak) geçiyoruz.
+                // Böylece detay sayfasında 'geri' yapıldığında BoxesPage'e (yani bu sayfanın bir öncesine) dönülür.
+                router.replace({ pathname: '/box/[id]', params: { id: result.data.id } });
             } else {
                 Alert.alert("Hata", result.error || "Kutu oluşturulamadı.");
             }
@@ -82,18 +142,7 @@ const CreateBoxPage = () => {
         }
     }
 
-    const formatInputDate = (val) => {
-        if (!val) return '';
-        const cleanDate = val.split('T')[0]; // Varsa saat kısmını (T00:00:00) çöpe at
-
-        // Eğer format YYYY-MM-DD ise (yani ilk parça 4 haneli yıl ise) ters çevir
-        if (cleanDate.includes('-') && cleanDate.split('-')[0].length === 4) {
-            return cleanDate.split('-').reverse().join('-');
-        }
-
-        // Zaten 18-06-2026 formatındaysa veya kullanıcı elle yazıyorsa hiç dokunma
-        return cleanDate;
-    };
+    // formatInputDate'i sildik çünkü text inputa dateValue'yu olduğu gibi veriyoruz
 
     return (
         // 3. KLAVYE GİZLEME DÜZELTİLDİ: Tüm sayfayı sarmaladık ki boşluğa basınca klavye kapansın
@@ -157,16 +206,21 @@ const CreateBoxPage = () => {
                     value={description}
                 />
 
-                <ThemedInput
-                    style={[
-                        { width: "85%", marginBottom: 10 },
-                    ]}
-                    placeholder="Date"
-                    placeholderTextColor={theme.textLight}
-                    onChangeText={setDateValue}
-                    // Değeri doğrudan fonksiyondan geçirerek ekrana basıyoruz
-                    value={formatInputDate(date ? date : dateValue)}
-                />
+                <View style={{ width: "85%", marginBottom: 10, flexDirection: "row", alignItems: "center" }}>
+                    <ThemedInput
+                        style={{ flex: 1 }}
+                        placeholder="Date (e.g. 18.06.2026)"
+                        placeholderTextColor={theme.textLight}
+                        onChangeText={setDateValue}
+                        value={dateValue}
+                    />
+                    <TouchableOpacity 
+                        style={{ position: 'absolute', right: 15 }} 
+                        onPress={() => setIsCalendarVisible(true)}
+                    >
+                        <Ionicons name="calendar-outline" size={24} color={theme.primary} />
+                    </TouchableOpacity>
+                </View>
 
 
 
@@ -260,6 +314,127 @@ const CreateBoxPage = () => {
                     <ThemedText style={{ color: theme.primary, fontWeight: "bold" }}>Add Features</ThemedText>
                 </TouchableOpacity>
 
+                {/* TAKVİM MODALI */}
+                <Modal visible={isCalendarVisible} transparent={true} animationType="fade">
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.calendarPopup, { backgroundColor: theme.background }]}>
+
+                            {showMonthPicker ? (
+                                /* ===== AY/YIL SEÇİCİ (Month Picker) ===== */
+                                <View style={{ height: 340 }}>
+                                    <FlatList
+                                        data={Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i)}
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        initialScrollIndex={(() => {
+                                            const years = Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i);
+                                            const idx = years.indexOf(pickerYear);
+                                            return idx === -1 ? 10 : idx;
+                                        })()}
+                                        getItemLayout={(data, index) => ({ length: calScreenWidth, offset: calScreenWidth * index, index })}
+                                        keyExtractor={item => item.toString()}
+                                        renderItem={({ item: yearItem }) => (
+                                            <View style={{ width: calScreenWidth, paddingTop: 5 }}>
+                                                <ThemedText style={{ textAlign: 'center', fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>
+                                                    {yearItem}
+                                                </ThemedText>
+                                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                                                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, index) => (
+                                                        <TouchableOpacity
+                                                            key={m}
+                                                            style={{
+                                                                width: '30%',
+                                                                paddingVertical: 14,
+                                                                alignItems: 'center',
+                                                                backgroundColor: theme.primary + '15',
+                                                                borderRadius: 12,
+                                                                marginBottom: 10,
+                                                            }}
+                                                            onPress={() => {
+                                                                const newMonthStr = (index + 1).toString().padStart(2, '0');
+                                                                const newDate = `${yearItem}-${newMonthStr}-01`;
+                                                                setCalendarCurrent(newDate);
+                                                                setCalKey(`cal-${newDate}`);
+                                                                setShowMonthPicker(false);
+                                                            }}
+                                                        >
+                                                            <ThemedText style={{ fontWeight: 'bold', color: theme.primary, fontSize: 15 }}>{m}</ThemedText>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </View>
+                                        )}
+                                    />
+                                </View>
+                            ) : (
+                                /* ===== TAKVİM LİSTESİ (CalendarList) ===== */
+                                <CalendarList
+                                    key={`${calKey}-${themeName}`}
+                                    current={calendarCurrent}
+                                    onDayPress={(day) => {
+                                        setDateValue(day.dateString.split('-').reverse().join('.')); // DD.MM.YYYY
+                                        setIsCalendarVisible(false);
+                                        setShowMonthPicker(false);
+                                    }}
+                                    firstDay={1}
+                                    renderHeader={(date) => {
+                                        const y = typeof date.getFullYear === 'function' ? date.getFullYear() : date.year;
+                                        const mIndex = typeof date.getMonth === 'function' ? date.getMonth() : (date.month - 1);
+                                        const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                        const mName = monthsEn[mIndex];
+                                        return (
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    setPickerYear(y || new Date().getFullYear());
+                                                    setShowMonthPicker(true);
+                                                }}
+                                                style={{ padding: 8 }}
+                                            >
+                                                <ThemedText style={{ fontSize: 17, fontWeight: 'bold' }}>
+                                                    {mName} {y}
+                                                </ThemedText>
+                                            </TouchableOpacity>
+                                        );
+                                    }}
+                                    horizontal={true}
+                                    pagingEnabled={true}
+                                    calendarWidth={calScreenWidth}
+                                    pastScrollRange={24}
+                                    futureScrollRange={24}
+                                    markedDates={{
+                                        [new Date().toISOString().split('T')[0]]: {
+                                            selected: true,
+                                            selectedColor: theme.primary + '40',
+                                            selectedTextColor: theme.text,
+                                        }
+                                    }}
+                                    theme={{
+                                        calendarBackground: theme.background,
+                                        textSectionTitleColor: theme.textLight,
+                                        dayTextColor: theme.text,
+                                        todayTextColor: theme.primary,
+                                        textDisabledColor: theme.textLight ? `${theme.textLight}50` : '#d9e1e8',
+                                        textDayFontSize: 14,
+                                        textDayHeaderFontSize: 14,
+                                    }}
+                                    style={{ height: 340 }}
+                                />
+                            )}
+
+                            <TouchableOpacity
+                                style={[styles.closeCalendarBtn, { backgroundColor: theme.primary }]}
+                                onPress={() => {
+                                    setIsCalendarVisible(false);
+                                    setShowMonthPicker(false);
+                                }}
+                            >
+                                <ThemedText style={{ color: "#fff", fontWeight: "bold" }}>Close</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+
                 {/* ALTTAN ÇIKAN Features PANELİ */}
                 {isFeaturesVisible && (
                     <ThemedView style={styles.bottomSheet}>
@@ -277,87 +452,162 @@ const CreateBoxPage = () => {
                             {/* AYIRICI ÇİZGİ */}
                             <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
 
+                            { (hasNote || hasTodos || hasLocation || hasMedia) && (
+                                <ThemedText title={true}>Added Features</ThemedText>
+                            )}
+
                             {/* --- NOTES --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
-                                router.push({
-                                    pathname: "/note/CreateNotePage",
-                                    params: {
-
-                                    }
-                                });
-                            }}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <Ionicons name="document-text" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Add a Note
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
-
-                            <Spacer height={5} />
+                            {hasNote && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push("/note/CreateNotePage"); }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="document-text" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Added Notes
+                                            </ThemedText>
+                                            <Ionicons onPress={() => handleDeleteFeature('note')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* --- TODOS --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
-                                router.push({
-                                    pathname: "/todo/CreateTodo",
-                                    params: {
-
-                                    }
-                                });
-                            }}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Add a Todo
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
-
-                            <Spacer height={5} />
+                            {hasTodos && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push("/todo/CreateTodo"); }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Added Todos
+                                            </ThemedText>
+                                            <Ionicons onPress={() => handleDeleteFeature('todo')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* --- LOCATION --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
-                                router.push({
-                                    pathname: "/location/UploadLocation",
-                                    params: {
-
-                                    }
-                                });
-                            }}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <Ionicons name="location" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Add Location
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
-
-                            <Spacer height={5} />
+                            {hasLocation && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push("/location/UploadLocation"); }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="location" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Added Location
+                                            </ThemedText>
+                                            <Ionicons onPress={() => handleDeleteFeature('location')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* --- MEDIA --- */}
-                            <TouchableOpacity activeOpacity={0.7} onPress={() => {
-                                router.push({
-                                    pathname: "/media/create/UploadPhoto",
-                                    params: {
+                            {hasMedia && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push("/media/create/UploadPhoto"); }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Added Media
+                                            </ThemedText>
+                                            <Ionicons onPress={() => handleDeleteFeature('media')} name="trash-outline" size={24} color="#EF4444" style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
-                                    }
-                                });
-                            }}>
-                                <ThemedCard style={styles.noteCard}>
-                                    <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
-                                    <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
-                                    <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
-                                        Attach Media
-                                    </ThemedText>
-                                    <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
+                            {(hasNote || hasTodos || hasLocation || hasMedia) && (
+                                <>
+                                    <Spacer height={15} />
+                                    <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
+                                </>
+                            )}
+
+                            <ThemedText title={true}>Available Features</ThemedText>
+
+                            {/* --- NOTES --- */}
+                            {!hasNote && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                        router.push("/note/CreateNotePage");
+                                    }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="document-text" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Add a Note
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+                            {/* --- TODOS --- */}
+                            {!hasTodos && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                        router.push("/todo/CreateTodo");
+                                    }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Add a Todo
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+                            {/* --- LOCATION --- */}
+                            {!hasLocation && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                        router.push("/location/UploadLocation");
+                                    }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <Ionicons name="location" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Add Location
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
+
+                            {/* --- MEDIA --- */}
+                            {!hasMedia && (
+                                <>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                        router.push("/media/create/UploadPhoto");
+                                    }}>
+                                        <ThemedCard style={styles.noteCard}>
+                                            <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
+                                            <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
+                                            <ThemedText style={{ alignSelf: "center", fontSize: 16 }} title={true}>
+                                                Attach Media
+                                            </ThemedText>
+                                            <Ionicons name="add" size={24} color={theme.primary} style={{ marginLeft: "auto" }} />
+                                        </ThemedCard>
+                                    </TouchableOpacity>
+                                    <Spacer height={5} />
+                                </>
+                            )}
 
                             {/* En alta biraz boşluk bırakalım ki çok sıkışık durmasın */}
                             <Spacer height={20} />
@@ -505,9 +755,31 @@ const styles = StyleSheet.create({
     },
     featureDividerLine: {
 
-        width: 1.5,           // Çizginin kalınlığı
-        height: 20,         // Çizginin uzunluğu (ikona uyumlu)
         opacity: 0.3,
         alignSelf: "center"       // Göz yormaması için saydamlık
     },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 1000
+    },
+    calendarPopup: {
+        width: '85%',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 10,
+        overflow: 'hidden',
+    },
+    closeCalendarBtn: {
+        paddingVertical: 10,
+        borderRadius: 15,
+        alignItems: 'center',
+        marginTop: 15,
+    }
 });
