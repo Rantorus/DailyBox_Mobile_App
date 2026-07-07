@@ -1,6 +1,6 @@
 import { FlatList, Pressable, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import React from 'react';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useLocalSearchParams, Stack, useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
@@ -38,23 +38,25 @@ const ChapterDetail = () => {
     const [includedBoxes, setIncludedBoxes] = React.useState([]);
     const [loadingBoxes, setLoadingBoxes] = React.useState(true);
 
-    React.useEffect(() => {
-        const fetchChapterBoxes = async () => {
-            setLoadingBoxes(true);
-            try {
-                const response = await api.get(`/boxes/chapter/${id}`);
-                setIncludedBoxes(response.data.data || response.data || []);
-            } catch (err) {
-                console.error("Failed to fetch chapter boxes:", err);
-            } finally {
-                setLoadingBoxes(false);
-            }
-        };
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchChapterBoxes = async () => {
+                setLoadingBoxes(true);
+                try {
+                    const response = await api.get(`/boxes/chapter/${id}`);
+                    setIncludedBoxes(response.data.data || response.data || []);
+                } catch (err) {
+                    console.error("Failed to fetch chapter boxes:", err);
+                } finally {
+                    setLoadingBoxes(false);
+                }
+            };
 
-        if (id) {
-            fetchChapterBoxes();
-        }
-    }, [id]);
+            if (id) {
+                fetchChapterBoxes();
+            }
+        }, [id])
+    );
 
     return (
         <ThemedView safe={true} style={styles.container}>

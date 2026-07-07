@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, Dimensions } from 'react-native';
 import React, { useMemo, useState } from 'react';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -7,7 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack, useFocusEffect } from 'expo-router';
 import ThemedInput from '../../components/ThemedInput';
 import ThemedCard from '../../components/ThemedCard';
 
@@ -15,7 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useBoxStore } from '../../store/boxStore';
-import { ActivityIndicator, Alert } from 'react-native';
+import { Alert, ActivityIndicator, Modal } from 'react-native';
+import { CalendarList } from 'react-native-calendars';
+import api from '../../services/api';
 
 
 const EditBoxPage = () => {
@@ -31,23 +33,58 @@ const EditBoxPage = () => {
 
     const boxData = boxes.find((data) => data.id === boxDataId);
 
+    const formatInitialDate = (val) => {
+        if (!val) return '';
+        let cleanDate = val.split('T')[0];
+        if (cleanDate.includes('-') && cleanDate.split('-')[0].length === 4) {
+            return cleanDate.split('-').reverse().join('.');
+        }
+        return cleanDate;
+    };
+
     const [title, setTitle] = useState(boxData?.title || "");
     const [description, setDescription] = useState(boxData?.description || "");
-    const [dateValue, setDateValue] = useState(boxData?.date ? boxData.date.split('T')[0] : "");
+    const [dateValue, setDateValue] = useState(boxData?.date ? formatInitialDate(boxData.date) : "");
     const [type, setType] = useState(boxData?.type || "");
     const [isTypesVisible, setIsTypesVisible] = useState(true);
     const [isFavorite, setIsFavorite] = useState(boxData?.is_favorite || boxData?.isFavorite || false);
     // UI stateleri (Features menüsü açık mı kapalı mı)
     const [isFeaturesVisible, setIsFeaturesVisible] = useState(false);
+    const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+    const [calendarCurrent, setCalendarCurrent] = useState(boxData?.date ? boxData.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+    const [calKey, setCalKey] = useState('cal-edit-initial');
+    const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+
+    const calScreenWidth = Dimensions.get('window').width * 0.85 - 40; // modal width minus padding
 
     const router = useRouter();
 
-    // Veritabanındaki has_* bayraklarını kullanarak özelliklerin ekli olup olmadığını anlıyoruz
-    const hasNote = boxData?.has_note || false;
-    const hasLocation = boxData?.has_location || false;
-    const hasMedia = boxData?.has_media || false;
-    // Todo tablosu ayrı olduğu için has_todos DB'de yok ama var kabul edelim
-    const hasTodos = boxData?.has_todos || false;
+    // Veritabanındaki has_* bayraklarını ve içeriklerini kontrol ediyoruz
+    const hasNote = boxData?.has_note || !!boxData?.note_content || !!boxData?.note_title;
+    const hasLocation = boxData?.has_location || !!boxData?.location_lat;
+    const hasMedia = boxData?.has_media || 
+                     (Array.isArray(boxData?.media_photos) && boxData.media_photos.length > 0) || 
+                     (Array.isArray(boxData?.media_docs) && boxData.media_docs.length > 0) || 
+                     (Array.isArray(boxData?.media_audio) && boxData.media_audio.length > 0);
+                     
+    // Todo tablosu ayrı olduğu için sayfaya her dönüldüğünde var mı diye kontrol et
+    const [hasTodos, setHasTodos] = useState(false);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const checkTodos = async () => {
+                try {
+                    const response = await api.get(`/todos/box/${boxDataId}`);
+                    const todos = response.data.data || response.data || [];
+                    setHasTodos(todos.length > 0);
+                } catch (err) {
+                    console.log("Error fetching todos in EditBoxPage:", err);
+                }
+            };
+            if (boxDataId) checkTodos();
+        }, [boxDataId])
+    );
 
     const handleDeleteFeature = async (featureType) => {
         let updatePayload = {};
@@ -69,19 +106,7 @@ const EditBoxPage = () => {
         }
     };
 
-    // Gelen tarihi güvenli bir şekilde DD-MM-YYYY formatına çevirir
-    const formatInputDate = (val) => {
-        if (!val) return '';
-        const cleanDate = val.split('T')[0]; // Varsa saat kısmını (T00:00:00) çöpe at
-
-        // Eğer format YYYY-MM-DD ise (yani ilk parça 4 haneli yıl ise) ters çevir
-        if (cleanDate.includes('-') && cleanDate.split('-')[0].length === 4) {
-            return cleanDate.split('-').reverse().join('-');
-        }
-
-        // Zaten 18-06-2026 formatındaysa veya kullanıcı elle yazıyorsa hiç dokunma
-        return cleanDate;
-    };
+    // formatInputDate'i sildik çünkü text inputa dateValue'yu olduğu gibi veriyoruz
 
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
     const availableTypes = useMemo(() => {
@@ -138,6 +163,8 @@ const EditBoxPage = () => {
 
             const result = await updateBox(boxDataId, updateData);
             if (result.success) {
+                // Zaten Box Details sayfasından buraya geldiğimiz için
+                // sadece router.back() yapmamız bizi güncellenmiş Details sayfasına döndürür.
                 router.back();
             } else {
                 Alert.alert("Hata", result.error || "Kutu güncellenemedi.");
@@ -232,16 +259,21 @@ const EditBoxPage = () => {
                     value={description}
                 />
 
-                <ThemedInput
-                    style={[
-                        { width: "85%", marginBottom: 10 },
-                    ]}
-                    placeholder="Date"
-                    placeholderTextColor={theme.textLight}
-                    onChangeText={setDateValue}
-                    // "date" değişkenini sildik, sadece kendi state'ini (dateValue) formata sokuyoruz
-                    value={formatInputDate(dateValue)}
-                />
+                <View style={{ width: "85%", alignSelf: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <ThemedInput
+                        style={{ width: "100%", paddingRight: 40 }}
+                        placeholder="Date (DD.MM.YYYY)"
+                        placeholderTextColor={theme.textLight}
+                        onChangeText={setDateValue}
+                        value={dateValue}
+                    />
+                    <TouchableOpacity 
+                        style={{ position: 'absolute', right: 15 }} 
+                        onPress={() => setIsCalendarVisible(true)}
+                    >
+                        <Ionicons name="calendar-outline" size={24} color={theme.primary} />
+                    </TouchableOpacity>
+                </View>
 
 
 
@@ -343,6 +375,127 @@ const EditBoxPage = () => {
                     <ThemedText style={{ color: '#FF3B30', fontWeight: "bold" }}>Delete Box</ThemedText>
                 </TouchableOpacity>
 
+                {/* TAKVİM MODALI */}
+                <Modal visible={isCalendarVisible} transparent={true} animationType="fade">
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.calendarPopup, { backgroundColor: theme.background }]}>
+
+                            {showMonthPicker ? (
+                                /* ===== AY/YIL SEÇİCİ (Month Picker) ===== */
+                                <View style={{ height: 340 }}>
+                                    <FlatList
+                                        data={Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i)}
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        initialScrollIndex={(() => {
+                                            const years = Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i);
+                                            const idx = years.indexOf(pickerYear);
+                                            return idx === -1 ? 10 : idx;
+                                        })()}
+                                        getItemLayout={(data, index) => ({ length: calScreenWidth, offset: calScreenWidth * index, index })}
+                                        keyExtractor={item => item.toString()}
+                                        renderItem={({ item: yearItem }) => (
+                                            <View style={{ width: calScreenWidth, paddingTop: 5 }}>
+                                                <ThemedText style={{ textAlign: 'center', fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>
+                                                    {yearItem}
+                                                </ThemedText>
+                                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                                                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, index) => (
+                                                        <TouchableOpacity
+                                                            key={m}
+                                                            style={{
+                                                                width: '30%',
+                                                                paddingVertical: 14,
+                                                                alignItems: 'center',
+                                                                backgroundColor: theme.primary + '15',
+                                                                borderRadius: 12,
+                                                                marginBottom: 10,
+                                                            }}
+                                                            onPress={() => {
+                                                                const newMonthStr = (index + 1).toString().padStart(2, '0');
+                                                                const newDate = `${yearItem}-${newMonthStr}-01`;
+                                                                setCalendarCurrent(newDate);
+                                                                setCalKey(`cal-${newDate}`);
+                                                                setShowMonthPicker(false);
+                                                            }}
+                                                        >
+                                                            <ThemedText style={{ fontWeight: 'bold', color: theme.primary, fontSize: 15 }}>{m}</ThemedText>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </View>
+                                        )}
+                                    />
+                                </View>
+                            ) : (
+                                /* ===== TAKVİM LİSTESİ (CalendarList) ===== */
+                                <CalendarList
+                                    key={`${calKey}-${themeName}`}
+                                    current={calendarCurrent}
+                                    onDayPress={(day) => {
+                                        setDateValue(day.dateString.split('-').reverse().join('.')); // DD.MM.YYYY
+                                        setIsCalendarVisible(false);
+                                        setShowMonthPicker(false);
+                                    }}
+                                    firstDay={1}
+                                    renderHeader={(date) => {
+                                        const y = typeof date.getFullYear === 'function' ? date.getFullYear() : date.year;
+                                        const mIndex = typeof date.getMonth === 'function' ? date.getMonth() : (date.month - 1);
+                                        const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                        const mName = monthsEn[mIndex];
+                                        return (
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    setPickerYear(y || new Date().getFullYear());
+                                                    setShowMonthPicker(true);
+                                                }}
+                                                style={{ padding: 8 }}
+                                            >
+                                                <ThemedText style={{ fontSize: 17, fontWeight: 'bold' }}>
+                                                    {mName} {y}
+                                                </ThemedText>
+                                            </TouchableOpacity>
+                                        );
+                                    }}
+                                    horizontal={true}
+                                    pagingEnabled={true}
+                                    calendarWidth={calScreenWidth}
+                                    pastScrollRange={24}
+                                    futureScrollRange={24}
+                                    markedDates={{
+                                        [new Date().toISOString().split('T')[0]]: {
+                                            selected: true,
+                                            selectedColor: theme.primary + '40',
+                                            selectedTextColor: theme.text,
+                                        }
+                                    }}
+                                    theme={{
+                                        calendarBackground: theme.background,
+                                        textSectionTitleColor: theme.textLight,
+                                        dayTextColor: theme.text,
+                                        todayTextColor: theme.primary,
+                                        textDisabledColor: theme.textLight ? `${theme.textLight}50` : '#d9e1e8',
+                                        textDayFontSize: 14,
+                                        textDayHeaderFontSize: 14,
+                                    }}
+                                    style={{ height: 340 }}
+                                />
+                            )}
+
+                            <TouchableOpacity
+                                style={[styles.closeCalendarBtn, { backgroundColor: theme.primary }]}
+                                onPress={() => {
+                                    setIsCalendarVisible(false);
+                                    setShowMonthPicker(false);
+                                }}
+                            >
+                                <ThemedText style={{ color: "#fff", fontWeight: "bold" }}>Close</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+
                 <Spacer height={40} />
 
                 {/* ALTTAN ÇIKAN Features PANELİ */}
@@ -369,7 +522,7 @@ const EditBoxPage = () => {
                             {/* --- NOTES --- */}
                             {hasNote && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/note/EditNotePage', params: { boxId: boxDataId } })}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/note/EditNotePage', params: { boxDataId: boxDataId } })}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="document-text" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -386,7 +539,7 @@ const EditBoxPage = () => {
                             {/* --- TODOS --- */}
                             {hasTodos && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/todo/EditTodoPage', params: { boxId: boxDataId } })}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/todo/[id]', params: { id: boxDataId } })}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -463,7 +616,7 @@ const EditBoxPage = () => {
                             {/* --- TODOS --- */}
                             {!hasTodos && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/todo/CreateTodo', params: { boxId: boxDataId } }); }}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/todo/[id]', params: { id: boxDataId } }); }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="format-list-bulleted" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -673,4 +826,27 @@ const styles = StyleSheet.create({
         opacity: 0.3,
         alignSelf: "center"       // Göz yormaması için saydamlık
     },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    calendarPopup: {
+        width: '85%',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 10,
+        overflow: 'hidden',
+    },
+    closeCalendarBtn: {
+        paddingVertical: 10,
+        borderRadius: 15,
+        alignItems: 'center',
+        marginTop: 15,
+    }
 });

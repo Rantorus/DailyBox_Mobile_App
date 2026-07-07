@@ -12,20 +12,24 @@ import ThemedInput from '../../components/ThemedInput';
 import ThemedBtn from '../../components/ThemedBtn';
 import ThemedCard from '../../components/ThemedCard';
 import Spacer from '../../components/Spacer';
+import { useBoxStore } from '../../store/boxStore';
 
 const CreateTodoPage = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
 
+    const draftFeatures = useBoxStore(state => state.draftFeatures);
+    const setDraftFeature = useBoxStore(state => state.setDraftFeature);
+
     const [newTodo, setNewTodo] = useState("");
-    // Başlangıçta boş bir dizi. Kullanıcı ekledikçe dolacak.
-    const [todos, setTodos] = useState([]); 
+    // Başlangıçta draft'ta var olan todoları yüklüyoruz.
+    const [todos, setTodos] = useState(draftFeatures.todo || []); 
 
     // --- ETKİLEŞİM FONKSİYONLARI ---
     const handleSave = () => {
-        // İleride burada 'todos' state'ini alıp ilgili Box'ın veritabanına kaydedeceğiz.
-        console.log("Saved Todos to Box:", todos);
+        // Zustand store'a kaydet
+        setDraftFeature('todo', todos);
         // Kaydettikten sonra bir önceki ekrana dön
         router.back();
     };
@@ -84,7 +88,7 @@ const CreateTodoPage = () => {
                 }}
             />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
                 
                 {/* --- ADD YENİ TODO ALANI --- */}
                 <View style={styles.inputRow}>

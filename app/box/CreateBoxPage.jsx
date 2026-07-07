@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useBoxStore } from '../../store/boxStore';
+import { useTodoStore } from '../../store/todoStore';
 import { Alert, ActivityIndicator, Modal } from 'react-native';
 import { CalendarList } from 'react-native-calendars';
 
@@ -57,10 +58,16 @@ const CreateBoxPage = () => {
     const setDraftFeature = useBoxStore(state => state.setDraftFeature);
     const clearDraftFeatures = useBoxStore(state => state.clearDraftFeatures);
 
-    const hasNote = !!draftFeatures.note;
-    const hasLocation = !!draftFeatures.location;
-    const hasMedia = !!draftFeatures.media;
-    const hasTodos = !!draftFeatures.todo;
+    const addTodo = useTodoStore(state => state.addTodo);
+
+    const hasNote = draftFeatures.note && (draftFeatures.note.title || draftFeatures.note.content);
+    const hasLocation = draftFeatures.location && (draftFeatures.location.latitude || draftFeatures.location.address);
+    const hasMedia = draftFeatures.media && (
+        (draftFeatures.media.photos && draftFeatures.media.photos.length > 0) || 
+        (draftFeatures.media.docs && draftFeatures.media.docs.length > 0) || 
+        (draftFeatures.media.audio && draftFeatures.media.audio.length > 0)
+    );
+    const hasTodos = Array.isArray(draftFeatures.todo) && draftFeatures.todo.length > 0;
 
     const handleDeleteFeature = (featureType) => {
         setDraftFeature(featureType, null);
@@ -128,7 +135,18 @@ const CreateBoxPage = () => {
 
             const result = await createBox(boxData);
             if (result.success) {
-                // TODO: If hasTodos is true, create todos separately using the returned box id: result.data.id
+                // Draft todoları var ise veritabanına kaydedelim
+                if (hasTodos && draftFeatures.todo && draftFeatures.todo.length > 0) {
+                    for (let i = 0; i < draftFeatures.todo.length; i++) {
+                        const t = draftFeatures.todo[i];
+                        await addTodo(result.data.id, {
+                            text: t.text,
+                            isCompleted: t.isCompleted,
+                            positionIndex: i
+                        });
+                    }
+                }
+
                 clearDraftFeatures();
                 // Geri dönmek yerine detay sayfasına replace (yerine koyarak) geçiyoruz.
                 // Böylece detay sayfasında 'geri' yapıldığında BoxesPage'e (yani bu sayfanın bir öncesine) dönülür.

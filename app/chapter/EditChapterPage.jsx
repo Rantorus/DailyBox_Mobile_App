@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useBoxStore } from '../../store/boxStore';
 import { useChapterStore } from '../../store/chapterStore';
+import api from '../../services/api';
 
 const EditChapterPage = () => {
     const { themeName } = useTheme();
@@ -41,6 +42,9 @@ const EditChapterPage = () => {
     const [isTypesVisible, setIsTypesVisible] = useState(true);
     const [isFavorite, setIsFavorite] = useState(chapterData?.is_favorite || false);
     const [isAddedBoxesVisible, setIsAddedBoxesVisible] = useState(false);
+    
+    // Orijinal kutuları saklamak için state (Kaydederken tekrar eklememek için)
+    const [originalBoxesState, setOriginalBoxesState] = useState([]);
 
     const [selectedBoxes, setSelectedBoxes] = useState(() => {
         // 1. Orijinal kutular (varsa)
@@ -69,6 +73,27 @@ const EditChapterPage = () => {
         // Sayfa kapatıldığında dinleyiciyi temizliyoruz (Memory leak önlemek için)
         return () => subscription.remove();
     }, []);
+
+    // Edit yapıldığında mevcut kutuları backend'den çekip listeye ekler
+    useEffect(() => {
+        const fetchExistingBoxes = async () => {
+            try {
+                const response = await api.get(`/boxes/chapter/${chapterDataId}`);
+                const boxesData = response.data.data || response.data || [];
+                const boxIds = boxesData.map(b => b.id);
+                
+                // Hem orijinal listeye hem de seçili listeye ekle
+                setOriginalBoxesState(boxIds);
+                setSelectedBoxes((prev) => [...new Set([...prev, ...boxIds])]);
+            } catch (err) {
+                console.error("Failed to fetch chapter boxes in edit page:", err);
+            }
+        };
+
+        if (chapterDataId) {
+            fetchExistingBoxes();
+        }
+    }, [chapterDataId]);
 
 
     // Dinamik tip listesi çıkarma
@@ -105,9 +130,8 @@ const EditChapterPage = () => {
             });
 
             if (result.success) {
-                // Determine new boxes to add
-                const originalBoxes = chapterData?.boxIds || [];
-                const boxesToAdd = selectedBoxes.filter(id => !originalBoxes.includes(id));
+                // Determine new boxes to add (Sadece sonradan eklenenleri backend'e gönder)
+                const boxesToAdd = selectedBoxes.filter(id => !originalBoxesState.includes(id));
                 
                 for (const boxId of boxesToAdd) {
                     await addBoxToChapter(chapterDataId, boxId);

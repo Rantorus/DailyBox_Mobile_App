@@ -70,8 +70,8 @@ const BoxesPage = () => {
     return boxes
       .filter((data) => {
         const categoryMatch = shownCategory
-          ? data.category.toLowerCase() === 'log'
-          : data.category.toLowerCase() === 'plan';
+          ? (data.category || 'log').toLowerCase() === 'log'
+          : (data.category || 'log').toLowerCase() === 'plan';
 
         // GERÇEK FAVORİ FİLTRESİ
         const favoriteMatch = showFavoritesOnly
@@ -102,13 +102,13 @@ const BoxesPage = () => {
   const previewCount = boxes.filter((item) => {
     // 1. Temel Filtre: Log mu Plan mı?
     const categoryMatch = shownCategory
-      ? item.category.toLowerCase() === 'log'
-      : item.category.toLowerCase() === 'plan';
+      ? (item.category || 'log').toLowerCase() === 'log'
+      : (item.category || 'log').toLowerCase() === 'plan';
 
     // 2. Arama Filtresi: Arama çubuğundaki yazıyı HEM BAŞLIKTA HEM AÇIKLAMADA ara!
     const searchMatch = query
-      ? item.title.toLowerCase().includes(query.toLowerCase()) ||
-      item.description.toLowerCase().includes(query.toLowerCase())
+      ? (item.title || "").toLowerCase().includes(query.toLowerCase()) ||
+        (item.description || "").toLowerCase().includes(query.toLowerCase())
       : true;
 
     // 3. FAVORİ FİLTRESİ (Geçici durumu kontrol et)

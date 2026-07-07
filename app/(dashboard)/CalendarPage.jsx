@@ -1,5 +1,5 @@
 import { StyleSheet, View, FlatList, Pressable, Dimensions, TouchableOpacity } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Colors } from '../../constants/Colors';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemedView from '../../components/ThemedView';
@@ -30,6 +30,11 @@ const CalendarPage = () => {
   const theme = Colors[themeName];
 
   const boxes = useBoxStore((state) => state.boxes);
+  const fetchMyBoxes = useBoxStore((state) => state.fetchMyBoxes);
+
+  useEffect(() => {
+    fetchMyBoxes();
+  }, []);
 
   const filteredData = boxes.filter((item) => {
     return item.date.split('T')[0] === selectedDate;

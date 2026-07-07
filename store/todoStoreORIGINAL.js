@@ -1,9 +1,7 @@
 import { create } from 'zustand';
 import api from '../services/api.js';
-import { useUserStore } from './useStore.jsx'; // activeUser'a ulaşmak gerekirse diye
-import { useBoxStore } from './boxStore.js';
 
-export const useTodoStore = create((set,get) => ({
+export const useTodoStore = create((set, get) => ({
     todos: [],
     isLoading: false,
     error: null,
@@ -23,12 +21,12 @@ export const useTodoStore = create((set,get) => ({
     },
 
     // Add a todo
-    addTodo: async (boxId, boxData) => {
+    addTodo: async (boxId, text) => {
         try {
-            const response = await api.post(`/todos/box/${boxId}`, boxData);
+            const response = await api.post(`/todos/box/${boxId}`, { text });
             const newTodo = response.data.data || response.data;
             set((state) => ({
-                todos: [...state.todos, newTodo]
+                todos: [newTodo, ...state.todos]
             }));
             return { success: true, data: newTodo };
         } catch (error) {
@@ -37,16 +35,14 @@ export const useTodoStore = create((set,get) => ({
     },
 
     // Update a todo (e.g., toggle status)
-    updateTodo: async (todoId, updateData, apiPayload = null) => {
+    updateTodo: async (todoId, updateData) => {
         try {
             // Optimistic update
             set((state) => ({
                 todos: state.todos.map(todo => todo.id === todoId ? { ...todo, ...updateData } : todo)
             }));
 
-            // Backend Joi validasyonuna takılmaması için sadece apiPayload gönderilir
-            const payload = apiPayload || updateData;
-            const response = await api.patch(`/todos/${todoId}`, payload);
+            const response = await api.patch(`/todos/${todoId}`, updateData);
             return { success: true, data: response.data.data || response.data };
         } catch (error) {
             // Need to fetch again or revert in a real robust scenario, but returning error for now
@@ -69,22 +65,6 @@ export const useTodoStore = create((set,get) => ({
         }
     },
 
-    // Update positions (Drag & Drop)
-    updateTodoPositions: async (todosArray) => {
-        try {
-            // Optimistic update
-            // Gelen diziye göre state'i anında güncelliyoruz
-            set({ todos: todosArray });
-
-            const response = await api.patch(`/todos/box/reorder`, { todosArray });
-            return { success: true, data: response.data.data || response.data };
-        } catch (error) {
-            // Eğer hata olursa listeyi tekrar çekmek en güvenlisi olabilir, 
-            // ama şimdilik sadece hata dönüyoruz.
-            return { success: false, error: error.response?.data?.message || 'Failed to reorder todos.' };
-        }
-    },
-
-     // Clear state
+    // Clear state
     clearTodos: () => set({ todos: [], error: null })
-}))
+}));

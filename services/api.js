@@ -4,7 +4,7 @@ import { getToken, removeToken } from './tokenService';
 // Backend'in URL'si.
 // Android Emülatör kullanıyorsan 10.0.2.2 her zaman en güvenlisidir.
 // Fiziksel telefonsa 172.168.100.120 yazılmalıdır.
-const API_URL = 'http://172.168.100.120:5001/api';
+const API_URL = 'http://172.168.100.117:5001/api';
 
 const api = axios.create({
     baseURL: API_URL,

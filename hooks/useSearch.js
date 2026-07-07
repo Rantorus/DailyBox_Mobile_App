@@ -16,10 +16,10 @@ export const useSearch = (filteredData) => {
         const timer = setTimeout(() => {
             setLoading(true);
             try {
-                // 3. DOĞRU FİLTRELEME: Objelerin 'title' değerinin içine bakıyoruz
+                // 3. DOĞRU FİLTRELEME: Objelerin 'title' ve 'description' değerinin içine bakıyoruz
                 const searchedData = filteredData.filter((item) =>
-                    item.title.toLowerCase().includes(query.toLowerCase()) ||
-                    item.description.toLowerCase().includes(query.toLowerCase())
+                    (item.title || "").toLowerCase().includes(query.toLowerCase()) ||
+                    (item.description || "").toLowerCase().includes(query.toLowerCase())
                 );
 
                 setResults(searchedData); 

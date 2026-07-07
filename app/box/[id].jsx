@@ -8,7 +8,9 @@ import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import Spacer from '../../components/Spacer';
 import { useBoxStore } from '../../store/boxStore';
+import { useTodoStore } from '../../store/todoStore';
 import { ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -25,6 +27,15 @@ const BoxDetail = () => {
 
     const boxes = useBoxStore((state) => state.boxes);
     const boxData = boxes.find((data) => data.id === id);
+
+    const todos = useTodoStore((state) => state.todos);
+    const fetchBoxTodos = useTodoStore((state) => state.fetchBoxTodos);
+
+    useEffect(() => {
+        if (boxData) {
+            fetchBoxTodos(boxData.id);
+        }
+    }, [boxData]);
 
     if (!boxData) {
         return (
@@ -154,7 +165,7 @@ const BoxDetail = () => {
                 </>
             )}
 
-            {(boxData.has_todos || boxData.hasTodos) && (
+            {(boxData.has_todos || boxData.hasTodos || todos.length > 0) && (
                 <>
                     <Spacer height={5} />
                     <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`todo/${boxData.id}`)}>
@@ -165,9 +176,8 @@ const BoxDetail = () => {
                                 style={[styles.featureDividerLine, { backgroundColor: theme.text, }]}
                             />
 
-
                             <ThemedText style={{ alignSelf: "center" }} title={true}>Todos</ThemedText>
-                            <ThemedText style={{ alignSelf: "center" }} title={true}>({boxData.todos?.length || 0} tasks)</ThemedText>
+                            <ThemedText style={{ alignSelf: "center" }} title={true}>({todos.length} tasks)</ThemedText>
 
                         </ThemedCard>
                     </TouchableOpacity>

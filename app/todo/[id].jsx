@@ -1,7 +1,7 @@
 import { StyleSheet, View, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; 
+import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
@@ -28,6 +28,7 @@ const TodoDetail = () => {
     const addTodo = useTodoStore((state) => state.addTodo);
     const updateTodo = useTodoStore((state) => state.updateTodo);
     const deleteTodoStore = useTodoStore((state) => state.deleteTodo);
+    const updateTodoPositions = useTodoStore((state) => state.updateTodoPositions);
     const isLoading = useTodoStore((state) => state.isLoading);
 
     const [newTodo, setNewTodo] = useState("");
@@ -49,20 +50,27 @@ const TodoDetail = () => {
     }
 
     // --- VERİ AYRIŞTIRMA (FILTERING) ---
-    const activeTodos = todos.filter(todo => todo.is_completed === false || todo.isCompleted === false);
-    const doneTodos = todos.filter(todo => todo.is_completed === true || todo.isCompleted === true);
+    const sortedTodos = [...todos].sort((a, b) => (a.position_index || 0) - (b.position_index || 0));
+
+    const activeTodos = sortedTodos.filter(todo => todo.is_completed === false || todo.isCompleted === false);
+    const doneTodos = sortedTodos.filter(todo => todo.is_completed === true || todo.isCompleted === true);
 
     // --- ETKİLEŞİM FONKSİYONLARI ---
     const toggleTodoStatus = async (todo) => {
-        await updateTodo(todo.id, { isCompleted: !todo.is_completed && !todo.isCompleted });
+        // Toggle ederken Joi şemasının beklediği yapıyı apiPayload olarak yolluyoruz
+        const isCompletedNow = todo.is_completed !== undefined ? todo.is_completed : todo.isCompleted;
+        await updateTodo(todo.id,
+            { isCompleted: !isCompletedNow, is_completed: !isCompletedNow },
+            { isCompleted: !isCompletedNow }
+        );
     };
 
     const handleAddTodo = async () => {
-        if (newTodo.trim() === "") return; 
+        if (newTodo.trim() === "") return;
 
-        const result = await addTodo(boxData.id, newTodo.trim());
+        const result = await addTodo(boxData.id, { text: newTodo.trim(), positionIndex: activeTodos.length });
         if (result.success) {
-            setNewTodo(""); 
+            setNewTodo("");
         }
     };
 
@@ -70,10 +78,37 @@ const TodoDetail = () => {
         await deleteTodoStore(todoId);
     };
 
+    // --- YER DEĞİŞTİRME ---
+    const handleMoveUp = async (index) => {
+        if (index === 0) return;
+        const newActive = [...activeTodos];
+        const temp = newActive[index - 1];
+        newActive[index - 1] = newActive[index];
+        newActive[index] = temp;
+
+        newActive.forEach((t, i) => t.position_index = i);
+
+        const newTodos = [...newActive, ...doneTodos];
+        await updateTodoPositions(newTodos);
+    };
+
+    const handleMoveDown = async (index) => {
+        if (index === activeTodos.length - 1) return;
+        const newActive = [...activeTodos];
+        const temp = newActive[index + 1];
+        newActive[index + 1] = newActive[index];
+        newActive[index] = temp;
+
+        newActive.forEach((t, i) => t.position_index = i);
+
+        const newTodos = [...newActive, ...doneTodos];
+        await updateTodoPositions(newTodos);
+    };
+
     return (
         <ThemedView style={styles.container} safe={true}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
-                
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+
                 {/* --- ADD YENİ TODO ALANI --- */}
                 <View style={styles.inputRow}>
                     <ThemedInput
@@ -83,7 +118,7 @@ const TodoDetail = () => {
                         onChangeText={setNewTodo}
                         value={newTodo}
                     />
-                    <ThemedBtn 
+                    <ThemedBtn
                         style={[styles.addButton, { backgroundColor: theme.primary }]}
                         onPress={handleAddTodo}
                     >
@@ -105,28 +140,38 @@ const TodoDetail = () => {
                             </View>
                         </View>
 
-                        {activeTodos.map((todo) => (
+                        {activeTodos.map((todo, index) => (
                             <ThemedCard key={todo.id} style={styles.todoCard}>
                                 {/* Sol Kısım: Onay İkonu ve Yazı (Tıklanabilir) */}
-                                <TouchableOpacity 
-                                    style={styles.todoContent} 
-                                    activeOpacity={0.7} 
+                                <TouchableOpacity
+                                    style={styles.todoContent}
+                                    activeOpacity={0.7}
                                     onPress={() => toggleTodoStatus(todo)}
                                 >
                                     <Ionicons name="ellipse-outline" size={24} color={theme.textLight} />
                                     <ThemedText style={styles.todoText}>{todo.text}</ThemedText>
                                 </TouchableOpacity>
 
+                                {/* Oklar */}
+                                <View style={{ flexDirection: 'column', alignItems: 'center', marginLeft: 5, gap: 4 }}>
+                                    <TouchableOpacity onPress={() => handleMoveUp(index)} disabled={index === 0}>
+                                        <Ionicons name="chevron-up" size={20} color={index === 0 ? theme.border : theme.primary} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => handleMoveDown(index)} disabled={index === activeTodos.length - 1}>
+                                        <Ionicons name="chevron-down" size={20} color={index === activeTodos.length - 1 ? theme.border : theme.primary} />
+                                    </TouchableOpacity>
+                                </View>
+
                                 {/* Sağ Kısım: Çöp Kutusu (Tıklanabilir) */}
-                                <TouchableOpacity 
-                                    style={styles.deleteBtn} 
+                                <TouchableOpacity
+                                    style={styles.deleteBtn}
                                     onPress={() => deleteTodo(todo.id)}
                                 >
                                     <Ionicons name="trash-outline" size={22} color="#FF3B30" />
                                 </TouchableOpacity>
                             </ThemedCard>
                         ))}
-                        
+
                         <Spacer height={20} />
                     </>
                 )}
@@ -145,9 +190,9 @@ const TodoDetail = () => {
                         {doneTodos.map((todo) => (
                             <ThemedCard key={todo.id} style={[styles.todoCard, { opacity: 0.6 }]}>
                                 {/* Sol Kısım: Onay İkonu ve Yazı (Tıklanabilir) */}
-                                <TouchableOpacity 
-                                    style={styles.todoContent} 
-                                    activeOpacity={0.7} 
+                                <TouchableOpacity
+                                    style={styles.todoContent}
+                                    activeOpacity={0.7}
                                     onPress={() => toggleTodoStatus(todo)}
                                 >
                                     <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
@@ -157,11 +202,10 @@ const TodoDetail = () => {
                                 </TouchableOpacity>
 
                                 {/* Sağ Kısım: Çöp Kutusu (Tıklanabilir) */}
-                                <TouchableOpacity 
-                                    style={styles.deleteBtn} 
+                                <TouchableOpacity
+                                    style={styles.deleteBtn}
                                     onPress={() => deleteTodo(todo.id)}
                                 >
-                                    {/* Bitenlerde kırmızı göz yormasın diye gri çöp kutusu daha şık durur */}
                                     <Ionicons name="trash-outline" size={22} color={theme.textLight} />
                                 </TouchableOpacity>
                             </ThemedCard>
@@ -185,7 +229,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        width: "100%", 
+        width: "100%",
         marginTop: 10,
         gap: 12,
     },
@@ -231,6 +275,6 @@ const styles = StyleSheet.create({
     },
     deleteBtn: {
         marginLeft: 10,
-        padding: 5, // Tıklama (hit) alanını genişletmek için boşluk eklendi
+        padding: 5,
     }
 })
