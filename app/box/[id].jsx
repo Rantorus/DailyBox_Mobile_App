@@ -8,6 +8,7 @@ import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import Spacer from '../../components/Spacer';
 import { useBoxStore } from '../../store/boxStore';
+import { useMediaStore } from '../../store/mediaStore';
 import { useTodoStore } from '../../store/todoStore';
 import { ActivityIndicator } from 'react-native';
 import { useEffect } from 'react';
@@ -207,7 +208,10 @@ const BoxDetail = () => {
             {(boxData.has_media || boxData.hasMedia) && (
                 <>
                     <Spacer height={5} />
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`media/view/ViewPhoto`)}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                        useMediaStore.getState().setCurrentBoxId(boxData.id);
+                        router.push(`/media/view/ViewPhoto?boxId=${boxData.id}`);
+                    }}>
                         <ThemedCard style={styles.noteCard}>
                             <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
 

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
     StyleSheet, View, TouchableOpacity,
-    FlatList, Image, Alert
+    FlatList, Image, Alert, ActivityIndicator
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { File, Paths } from 'expo-file-system/next';
@@ -14,38 +14,57 @@ import ThemedText from '../../../components/ThemedText';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useBoxStore } from '../../../store/boxStore';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function EditPhoto() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
+    const params = useLocalSearchParams();
+    const storeBoxId = useMediaStore(state => state.currentBoxId);
+    // URL param varsa onu kullan, yoksa store'daki ID'yi kullan
+    const boxId = params.boxId || storeBoxId;
 
-    // Store — hem oku hem değiştir
-    const images = useMediaStore(state => state.images);
-    const addImage = useMediaStore(state => state.addImage);
-    const removeImage = useMediaStore(state => state.removeImage);
+    // BOX STORE (Backend için)
+    const boxes = useBoxStore(state => state.boxes);
+    const boxData = boxes.find((data) => String(data.id) === String(boxId));
+    
+    const uploadBoxPhoto = useBoxStore(state => state.uploadBoxPhoto);
+    const deleteBoxPhoto = useBoxStore(state => state.deleteBoxPhoto);
+
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Box verisinden fotoğrafları çekiyoruz (media_photos sadece URL array'idir)
+    const images = boxData?.media_photos?.map((url, index) => ({
+        id: index.toString(),
+        uri: url
+    })) || [];
 
     // ==========================================
     // EKLEME İŞLEMLERİ
     // ==========================================
 
     const saveImageToLocal = async (cacheUri) => {
+        if (!boxId) {
+            Alert.alert("Hata", "Box ID bulunamadı.");
+            return;
+        }
+
         try {
-            const sourceFile = new File(cacheUri);
+            setIsUploading(true);
             const fileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
-            const destinationFile = new File(Paths.document, fileName);
+            const match = /\.(\w+)$/.exec(fileName);
+            const type = match ? `image/${match[1]}` : `image`;
 
-            await sourceFile.copy(destinationFile);
+            const result = await uploadBoxPhoto(boxId, cacheUri, type, fileName);
+            setIsUploading(false);
 
-            addImage({
-                id: Date.now().toString(),
-                uri: destinationFile.uri,
-                date: new Date().toLocaleDateString('en-US', {
-                    month: 'long', day: 'numeric', year: 'numeric'
-                })
-            });
-
+            if (!result.success) {
+                Alert.alert("Hata", result.error || "Fotoğraf kaydedilemedi.");
+            }
         } catch (error) {
-            Alert.alert("Hata", "Fotoğraf kaydedilemedi.");
+            setIsUploading(false);
+            Alert.alert("Hata", "Fotoğraf kaydedilirken bir hata oluştu.");
             console.error("Kayıt Hatası:", error);
         }
     };
@@ -94,13 +113,13 @@ export default function EditPhoto() {
                     text: "Sil",
                     style: "destructive",
                     onPress: async () => {
-                        try {
-                            const file = new File(uri);
-                            if (file.exists) file.delete();
-                        } catch (e) {
-                            console.error("Dosya silinemedi:", e);
+                        setIsUploading(true);
+                        const result = await deleteBoxPhoto(boxId, uri);
+                        setIsUploading(false);
+
+                        if (!result.success) {
+                            Alert.alert("Hata", result.error || "Fotoğraf silinemedi.");
                         }
-                        removeImage(id);
                     }
                 }
             ]
@@ -115,6 +134,12 @@ export default function EditPhoto() {
             <StatusBar style={theme.statusBarStyle} />
 
             <View style={styles.contentContainer}>
+                {isUploading && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15 }}>
+                        <ActivityIndicator size="large" color={theme.primary} />
+                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>İşleniyor...</ThemedText>
+                    </View>
+                )}
 
                 {/* BOŞ EKRAN */}
                 {images.length === 0 ? (

@@ -1,5 +1,5 @@
 // app/media/view/ViewPhoto.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
     StyleSheet, View, TouchableOpacity,
     FlatList, Image, Modal, Dimensions,
@@ -12,16 +12,28 @@ import ThemedView from '../../../components/ThemedView';
 import ThemedText from '../../../components/ThemedText';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
-import { useMediaStore } from '../../../store/mediaStore';
-
+import { useBoxStore } from '../../../store/boxStore';
+import { useLocalSearchParams } from 'expo-router';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ViewPhoto() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
-    // Store'dan fotoları oku (şu an RAM'de ne varsa)
-    const images = useMediaStore(state => state.images);
+    const { boxId } = useLocalSearchParams();
+    const boxes = useBoxStore(state => state.boxes);
+
+    // Box ID'ye göre box'ı bulup fotoğraflarını { id, uri } formatına çevir
+    const images = useMemo(() => {
+        if (!boxId) return [];
+        const boxData = boxes.find(b => String(b.id) === String(boxId));
+        if (!boxData || !boxData.media_photos) return [];
+        
+        return boxData.media_photos.map((url, index) => ({
+            id: String(index),
+            uri: url
+        }));
+    }, [boxId, boxes]);
 
     // Modal state'leri
     const [modalVisible, setModalVisible] = useState(false);

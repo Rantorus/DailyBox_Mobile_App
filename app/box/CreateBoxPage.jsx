@@ -1,5 +1,5 @@
 import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, Dimensions } from 'react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
 import Spacer from '../../components/Spacer';
@@ -18,6 +18,7 @@ import { useBoxStore } from '../../store/boxStore';
 import { useTodoStore } from '../../store/todoStore';
 import { Alert, ActivityIndicator, Modal } from 'react-native';
 import { CalendarList } from 'react-native-calendars';
+import { useMediaStore } from '../../store/mediaStore';
 
 const CreateBoxPage = () => {
     const { themeName } = useTheme();
@@ -46,13 +47,15 @@ const CreateBoxPage = () => {
     const [calKey, setCalKey] = useState('cal-create-initial');
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+    const [isSaving, setIsSaving] = useState(false);
 
     const calScreenWidth = Dimensions.get('window').width * 0.85 - 40; // modal width minus padding
 
     const boxes = useBoxStore(state => state.boxes);
     const createBox = useBoxStore(state => state.createBox);
+    const uploadBoxPhoto = useBoxStore(state => state.uploadBoxPhoto);
     const isLoading = useBoxStore(state => state.isLoading);
-    
+
     // Draft Features
     const draftFeatures = useBoxStore(state => state.draftFeatures);
     const setDraftFeature = useBoxStore(state => state.setDraftFeature);
@@ -60,14 +63,20 @@ const CreateBoxPage = () => {
 
     const addTodo = useTodoStore(state => state.addTodo);
 
-    const hasNote = draftFeatures.note && (draftFeatures.note.title || draftFeatures.note.content);
-    const hasLocation = draftFeatures.location && (draftFeatures.location.latitude || draftFeatures.location.address);
-    const hasMedia = draftFeatures.media && (
-        (draftFeatures.media.photos && draftFeatures.media.photos.length > 0) || 
-        (draftFeatures.media.docs && draftFeatures.media.docs.length > 0) || 
+    useEffect(() => {
+        // Bu sayfaya her girildiğinde önceki draftları (Örn: iptal edilen bir kutudan kalanlar) tamamen temizle
+        clearDraftFeatures();
+        useMediaStore.getState().clearMedia();
+    }, []);
+
+    const hasNote = !!(draftFeatures.note && (draftFeatures.note.title || draftFeatures.note.content));
+    const hasLocation = !!(draftFeatures.location && (draftFeatures.location.latitude || draftFeatures.location.address));
+    const hasMedia = !!(draftFeatures.media && (
+        (draftFeatures.media.photos && draftFeatures.media.photos.length > 0) ||
+        (draftFeatures.media.docs && draftFeatures.media.docs.length > 0) ||
         (draftFeatures.media.audio && draftFeatures.media.audio.length > 0)
-    );
-    const hasTodos = Array.isArray(draftFeatures.todo) && draftFeatures.todo.length > 0;
+    ));
+    const hasTodos = !!(Array.isArray(draftFeatures.todo) && draftFeatures.todo.length > 0);
 
     const handleDeleteFeature = (featureType) => {
         setDraftFeature(featureType, null);
@@ -81,6 +90,7 @@ const CreateBoxPage = () => {
 
     async function handleSave() {
         if (title.trim() && description.trim() && dateValue.trim() && type.trim()) {
+            setIsSaving(true);
             // ISO 8601 formata çevirme (örn: 2023-11-25T10:00:00Z)
             // Kullanıcı "2026-06-18" girdiyse onu Date objesine çeviriyoruz. Eğer parse edilemiyorsa exception atabilir, o yüzden dikkatli olmalıyız.
             let parsedDate;
@@ -88,31 +98,35 @@ const CreateBoxPage = () => {
                 // GG.AA.YYYY veya YYYY-MM-DD
                 let normalizedDate = dateValue.replace(/\./g, '-');
                 if (normalizedDate.includes('-') && normalizedDate.split('-')[0].length !== 4) {
-                     // GG-AA-YYYY formatı
-                     const parts = normalizedDate.split('-');
-                     // 12:00:00Z ekliyoruz ki yerel saat dilimi (TR: +3) sebebiyle bir önceki güne (21:00) atmasın.
-                     parsedDate = `${parts[2]}-${parts[1]}-${parts[0]}T12:00:00.000Z`;
+                    // GG-AA-YYYY formatı
+                    const parts = normalizedDate.split('-');
+                    // 12:00:00Z ekliyoruz ki yerel saat dilimi (TR: +3) sebebiyle bir önceki güne (21:00) atmasın.
+                    parsedDate = `${parts[2]}-${parts[1]}-${parts[0]}T12:00:00.000Z`;
                 } else {
-                     // YYYY-MM-DD formatı
-                     const parts = normalizedDate.split('-');
-                     parsedDate = `${parts[0]}-${parts[1]}-${parts[2]}T12:00:00.000Z`;
+                    // YYYY-MM-DD formatı
+                    const parts = normalizedDate.split('-');
+                    parsedDate = `${parts[0]}-${parts[1]}-${parts[2]}T12:00:00.000Z`;
                 }
             } catch (e) {
-                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD veya GG.AA.YYYY)");
-                 return;
+                setIsSaving(false);
+                Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD veya GG.AA.YYYY)");
+                return;
             }
 
             // Kategoriye göre tarih doğrulaması (Log = geçmiş/bugün, Plan = gelecek/bugün)
             const today = new Date();
-            const todayString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-            const selectedDateString = parsedDate.split('T')[0];
+            today.setHours(0, 0, 0, 0); // Sadece tarih kısmını kıyaslamak için saati sıfırlıyoruz
+            const selectedDate = new Date(parsedDate);
+            selectedDate.setHours(0, 0, 0, 0);
             const currentCategory = category || "log";
 
-            if (currentCategory === "log" && selectedDateString > todayString) {
-                Alert.alert("Geçersiz Tarih", "Gelecekten bir tarih girilemez. Lütfen plan kutusu (Plan) oluşturun veya bugün/geçmiş bir tarih girin.");
+            if (currentCategory === "log" && selectedDate > today) {
+                setIsSaving(false);
+                Alert.alert("Geçersiz Tarih", "Log kayıtları ileri bir tarihe atılamaz.");
                 return;
-            } else if (currentCategory === "plan" && selectedDateString < todayString) {
-                Alert.alert("Geçersiz Tarih", "Geçmişten bir tarih girilemez. Lütfen log kutusu (Log) oluşturun veya bugün/gelecek bir tarih girin.");
+            } else if (currentCategory === "plan" && selectedDate < today) {
+                setIsSaving(false);
+                Alert.alert("Geçersiz Tarih", "Plan kayıtları geçmiş bir tarihe atılamaz.");
                 return;
             }
 
@@ -128,9 +142,12 @@ const CreateBoxPage = () => {
                 hasNote: hasNote,
                 ...(hasNote ? { noteTitle: draftFeatures.note.title, noteContent: draftFeatures.note.content } : {}),
                 hasLocation: hasLocation,
-                ...(hasLocation ? draftFeatures.location : {}),
+                ...(hasLocation ? {
+                    locationLat: draftFeatures.location.latitude,
+                    locationLng: draftFeatures.location.longitude,
+                    locationAddress: draftFeatures.location.address
+                } : {}),
                 hasMedia: hasMedia,
-                ...(hasMedia ? draftFeatures.media : {}),
             };
 
             const result = await createBox(boxData);
@@ -147,13 +164,26 @@ const CreateBoxPage = () => {
                     }
                 }
 
+                // Draft media photos yükleyelim
+                if (hasMedia && draftFeatures.media && draftFeatures.media.photos && draftFeatures.media.photos.length > 0) {
+                    for (let photo of draftFeatures.media.photos) {
+                        const filename = photo.uri.split('/').pop() || `photo_${Date.now()}.jpg`;
+                        const match = /\.(\w+)$/.exec(filename);
+                        const type = match ? `image/${match[1]}` : `image`;
+                        await uploadBoxPhoto(result.data.id, photo.uri, type, filename);
+                    }
+                }
+
                 clearDraftFeatures();
+                useMediaStore.getState().clearMedia();
+                
                 // Geri dönmek yerine detay sayfasına replace (yerine koyarak) geçiyoruz.
                 // Böylece detay sayfasında 'geri' yapıldığında BoxesPage'e (yani bu sayfanın bir öncesine) dönülür.
                 router.replace({ pathname: '/box/[id]', params: { id: result.data.id } });
             } else {
                 Alert.alert("Hata", result.error || "Kutu oluşturulamadı.");
             }
+            setIsSaving(false);
         }
         else {
             Alert.alert("Eksik Bilgi", "Lütfen tüm zorunlu alanları doldurun.");
@@ -168,6 +198,18 @@ const CreateBoxPage = () => {
             <ThemedView safe={true} style={styles.container}>
                 <StatusBar style={theme.statusBarStyle} />
 
+                <Modal
+                    visible={isSaving}
+                    transparent={true}
+                    animationType="fade"
+                    statusBarTranslucent={true}
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                        <ActivityIndicator size="large" color={theme.primary} />
+                        <ThemedText style={{ color: '#fff', marginTop: 12, fontWeight: 'bold', fontSize: 16 }}>Saving...</ThemedText>
+                    </View>
+                </Modal>
+
                 {/* Ekranın üstündeki Box detail ve edit yazısı*/}
                 <Stack.Screen
                     options={{
@@ -175,35 +217,31 @@ const CreateBoxPage = () => {
                         title: category === "plan" ? "Create Plan Box" : "Create Log Box",
 
                         headerRight: () => (
-                                <TouchableOpacity
-                                    activeOpacity={0.7}
-                                    onPress={() => {
-                                        handleSave();
-                                    }}
-                                    style={[styles.editButton, {
-                                        backgroundColor: theme.primary + '20',
-                                    }]}
-                                    disabled={isLoading}
-                                >
-                                    {isLoading ? (
-                                        <ActivityIndicator size="small" color={theme.primary} />
-                                    ) : (
-                                        <>
-                                            <Ionicons
-                                                name={"checkmark-outline"}
-                                                size={20} // Kutu içine girdiği için 22 yerine 18 daha zarif durur
-                                                color={theme.primary}
-                                            />
-                                            <ThemedText style={{
-                                                color: theme.primary, // Yazı rengini de butonla uyumlu hale getirdik
-                                                fontWeight: "bold",
-                                                fontSize: 15
-                                            }}>
-                                                Create
-                                            </ThemedText>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    handleSave();
+                                }}
+                                style={[styles.editButton, {
+                                    backgroundColor: theme.primary + '20',
+                                }]}
+                                disabled={isSaving}
+                            >
+                                <>
+                                    <Ionicons
+                                        name={"checkmark-outline"}
+                                        size={20}
+                                        color={theme.primary}
+                                    />
+                                    <ThemedText style={{
+                                        color: theme.primary,
+                                        fontWeight: "bold",
+                                        fontSize: 15
+                                    }}>
+                                        Create
+                                    </ThemedText>
+                                </>
+                            </TouchableOpacity>
                         )
                     }}
                 />
@@ -232,8 +270,8 @@ const CreateBoxPage = () => {
                         onChangeText={setDateValue}
                         value={dateValue}
                     />
-                    <TouchableOpacity 
-                        style={{ position: 'absolute', right: 15 }} 
+                    <TouchableOpacity
+                        style={{ position: 'absolute', right: 15 }}
                         onPress={() => setIsCalendarVisible(true)}
                     >
                         <Ionicons name="calendar-outline" size={24} color={theme.primary} />
@@ -470,7 +508,7 @@ const CreateBoxPage = () => {
                             {/* AYIRICI ÇİZGİ */}
                             <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
 
-                            { (hasNote || hasTodos || hasLocation || hasMedia) && (
+                            {(hasNote || hasTodos || hasLocation || hasMedia) && (
                                 <ThemedText title={true}>Added Features</ThemedText>
                             )}
 

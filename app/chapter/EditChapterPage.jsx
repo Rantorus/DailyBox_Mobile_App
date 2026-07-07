@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, DeviceEventEmitter, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View, TouchableWithoutFeedback, Keyboard, Pressable, FlatList, DeviceEventEmitter, ActivityIndicator, Alert, Modal } from 'react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
@@ -112,6 +112,8 @@ const EditChapterPage = () => {
         return boxes.filter((box) => selectedBoxes.includes(box.id));
     }, [selectedBoxes, boxes]);
 
+    const [isDeleting, setIsDeleting] = useState(false);
+
     if (!chapterData) {
         return (
             <ThemedView safe={true} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -156,12 +158,12 @@ const EditChapterPage = () => {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
+                        setIsDeleting(true);
                         const result = await deleteChapter(chapterDataId);
+                        setIsDeleting(false);
+                        
                         if (result.success) {
-                            // Alert kapandıktan hemen sonra route state'in toparlanması için ufak bir bekleme (Expo Router Bug Fix)
-                            setTimeout(() => {
-                                router.replace("/(dashboard)/ChaptersPage");
-                            }, 100);
+                            router.replace("/(dashboard)/ChaptersPage");
                         } else {
                             Alert.alert("Hata", result.error || "Chapter silinemedi.");
                         }
@@ -192,6 +194,18 @@ const EditChapterPage = () => {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ThemedView safe={true} style={styles.container}>
                     <StatusBar style={theme.statusBarStyle} />
+
+                    <Modal
+                        visible={isDeleting}
+                        transparent={true}
+                        animationType="fade"
+                        statusBarTranslucent={true}
+                    >
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                            <ActivityIndicator size="large" color={theme.primary} />
+                            <ThemedText style={{ color: '#fff', marginTop: 12, fontWeight: 'bold', fontSize: 16 }}>Deleting...</ThemedText>
+                        </View>
+                    </Modal>
 
                     <Stack.Screen
                         options={{

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Image, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, Image, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { File, Paths } from 'expo-file-system/next';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 import ThemedView from '../../../components/ThemedView';
 import ThemedText from '../../../components/ThemedText';
@@ -11,58 +11,100 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useBoxStore } from '../../../store/boxStore';
 
 export default function UploadPhoto() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
+    const { boxId } = useLocalSearchParams(); // Eğer Edit flow'undan geliyorsa boxId olacaktır
 
-    // GLOBAL STORE 
+    // GLOBAL STORE (Draft için)
+    const images = useMediaStore(state => state.images);
     const addImage = useMediaStore(state => state.addImage);
-    const removeImage = useMediaStore(state => state.removeImage); // Silme fonksiyonu eklendi
+    const removeImage = useMediaStore(state => state.removeImage);
 
-    // YEREL VİTRİN
-    const [localImages, setLocalImages] = useState([]);
+    // BOX STORE (Backend için)
+    const uploadBoxPhoto = useBoxStore(state => state.uploadBoxPhoto);
+    const deleteBoxPhoto = useBoxStore(state => state.deleteBoxPhoto);
+
+    // YEREL VİTRİN - Eğer boxId yoksa (Yani Create flow'daysak), taslaktaki resimlerle başlat.
+    const [localImages, setLocalImages] = useState(boxId ? [] : images);
+    const [isUploading, setIsUploading] = useState(false);
 
     // ==========================================
     // SİLME İŞLEMİ (YEREL VE GLOBAL)
     // ==========================================
-    const handleRemoveLocal = (id, uri) => {
-        // Hafızadan da silmek iyi bir temizliktir
-        try {
-            const file = new File(uri);
-            if (file.exists) file.delete();
-        } catch (e) {
-            console.error("Dosya silinemedi:", e);
+    const handleRemoveLocal = async (id, uri) => {
+        if (boxId) {
+            // BACKEND SİLME (Edit modunda açılmışsa)
+            setIsUploading(true);
+            const result = await deleteBoxPhoto(boxId, uri);
+            setIsUploading(false);
+            if (result.success) {
+                setLocalImages(prev => prev.filter(image => image.uri !== uri));
+            } else {
+                Alert.alert("Hata", result.error || "Fotoğraf silinemedi.");
+            }
+        } else {
+            // DRAFT SİLME (Create modunda açılmışsa)
+            try {
+                const file = new File(uri);
+                if (file.exists) file.delete();
+            } catch (e) {
+                console.error("Dosya silinemedi:", e);
+            }
+            removeImage(id);
+            setLocalImages(prev => prev.filter(image => image.id !== id));
         }
-
-        removeImage(id); // 1. Global depodan sil
-        setLocalImages(prev => prev.filter(image => image.id !== id)); // 2. O anki ekrandan (vitrinden) sil
     };
 
     // ==========================================
     // FOTOĞRAF İŞLEMLERİ
     // ==========================================
     const saveImageToLocal = async (cacheUri) => {
-        try {
-            const sourceFile = new File(cacheUri);
+        if (boxId) {
+            // BACKEND YÜKLEME (Edit modunda açılmışsa)
+            setIsUploading(true);
             const fileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
-            const destinationFile = new File(Paths.document, fileName);
+            const match = /\.(\w+)$/.exec(fileName);
+            const type = match ? `image/${match[1]}` : `image`;
 
-            await sourceFile.copy(destinationFile);
+            const result = await uploadBoxPhoto(boxId, cacheUri, type, fileName);
+            setIsUploading(false);
 
-            const newImage = {
-                id: Date.now().toString(),
-                uri: destinationFile.uri,
-                date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-            };
+            if (result.success) {
+                // Backend başarılıysa, server'dan dönen en son yüklenen fotoğrafı vitrine ekleyelim
+                // result.data bize güncel media_photos array'ini veriyor
+                const updatedPhotos = result.data;
+                const newPhotoUrl = updatedPhotos[updatedPhotos.length - 1]; // son eklenen
+                
+                setLocalImages(prev => [...prev, { id: Date.now().toString(), uri: newPhotoUrl }]);
+            } else {
+                Alert.alert("Hata", result.error || "Fotoğraf yüklenemedi.");
+            }
+        } else {
+            // DRAFT YÜKLEME (Create modunda açılmışsa)
+            try {
+                const sourceFile = new File(cacheUri);
+                const fileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+                const destinationFile = new File(Paths.document, fileName);
 
-            addImage(newImage); // GLOBAL DEPOYA EKLE
-            setLocalImages(prev => [...prev, newImage]); // YEREL VİTRİNE EKLE
+                await sourceFile.copy(destinationFile);
 
-        } catch (error) {
-            Alert.alert("Hata", "Fotoğraf kaydedilemedi.");
-            console.error("Kayıt Hatası Detayı:", error);
+                const newImage = {
+                    id: Date.now().toString(),
+                    uri: destinationFile.uri,
+                    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                };
+
+                addImage(newImage); // GLOBAL DEPOYA EKLE
+                setLocalImages(prev => [...prev, newImage]); // YEREL VİTRİNE EKLE
+
+            } catch (error) {
+                Alert.alert("Hata", "Fotoğraf kaydedilemedi.");
+                console.error("Kayıt Hatası Detayı:", error);
+            }
         }
     };
 
@@ -108,6 +150,12 @@ export default function UploadPhoto() {
 
             {/* İÇERİK */}
             <View style={styles.contentContainer}>
+                {isUploading && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15 }}>
+                        <ActivityIndicator size="large" color={theme.primary} />
+                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>Uploading...</ThemedText>
+                    </View>
+                )}
                 {localImages.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={[styles.dashedBox, { borderColor: theme.primary }]}>

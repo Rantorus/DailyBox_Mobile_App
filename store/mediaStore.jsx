@@ -2,6 +2,10 @@
 import { create } from 'zustand';
 
 export const useMediaStore = create((set) => ({
+    // Aktif box ID — media ekranları arası paylaşım için
+    currentBoxId: null,
+    setCurrentBoxId: (id) => set({ currentBoxId: id }),
+
     // FOTOĞRAFLAR
     images: [],
     addImage: (newImage) => set(state => ({
@@ -36,4 +40,13 @@ export const useMediaStore = create((set) => ({
     removeLocation: (id) => set(state => ({
         locations: state.locations.filter(loc => loc.id !== id)
     })),
+
+    // TEMİZLEME FONKSİYONU
+    clearMedia: () => set({
+        currentBoxId: null,
+        images: [],
+        audios: [],
+        docs: [],
+        locations: []
+    })
 }));

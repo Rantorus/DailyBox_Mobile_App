@@ -97,6 +97,65 @@ export const useBoxStore = create((set, get) => ({
         }
     },
 
-    // 5. State'i temizle (Logout olduğunda çağrılmalı)
+    // 5. Medya Yükle (POST /api/media/box/:boxId/photo)
+    uploadBoxPhoto: async (boxId, photoUri, mimeType, fileName) => {
+        try {
+            const formData = new FormData();
+            formData.append('photo', {
+                uri: photoUri,
+                type: mimeType || 'image/jpeg',
+                name: fileName || `photo_${Date.now()}.jpg`,
+            });
+
+            const response = await api.post(`/media/box/${boxId}/photo`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const updatedPhotos = response.data.data; // Server'dan dönen yeni media_photos dizisi
+            
+            // Mevcut kutuyu güncelle
+            set((state) => ({
+                boxes: state.boxes.map(bx => 
+                    bx.id === boxId 
+                        ? { ...bx, media_photos: updatedPhotos, has_media: true } 
+                        : bx
+                )
+            }));
+            return { success: true, data: updatedPhotos };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Fotoğraf yüklenemedi.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // 6. Medya Sil (DELETE /api/media/box/:boxId/photo)
+    deleteBoxPhoto: async (boxId, photoUrl) => {
+        try {
+            const response = await api.delete(`/media/box/${boxId}/photo`, {
+                data: { url: photoUrl } // DELETE request body'de veri yollamak için config.data kullanılır
+            });
+
+            const updatedPhotos = response.data.data;
+            
+            set((state) => ({
+                boxes: state.boxes.map(bx => {
+                    if (bx.id === boxId) {
+                        // Eğer tüm medyalar boş kaldıysa has_media flag'ini backend'e uyumlu şekilde kapatmak gerekebilir.
+                        // Şimdilik sadece array'i güncelliyoruz
+                        return { ...bx, media_photos: updatedPhotos };
+                    }
+                    return bx;
+                })
+            }));
+            return { success: true, data: updatedPhotos };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Fotoğraf silinemedi.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // 7. State'i temizle (Logout olduğunda çağrılmalı)
     clearBox: () => set({ boxes: [], error: null })
 }))

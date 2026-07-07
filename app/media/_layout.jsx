@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import ThemedText from '../../components/ThemedText';
+import { useMediaStore } from '../../store/mediaStore';
+import { useBoxStore } from '../../store/boxStore';
 
 const ICON_SIZE = 24;
 
@@ -13,10 +15,19 @@ const MediaLayout = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
+    const currentBoxId = useMediaStore(state => state.currentBoxId);
 
     const handleCreate = () => {
-        // TODO: mediaStore'dan photos + audios + docs'u okuyup box'a kaydet
-        // const { photos, audios, docs } = useMediaStore.getState();
+        const { images, audios, docs } = useMediaStore.getState();
+        const setDraftFeature = useBoxStore.getState().setDraftFeature;
+        
+        // Draft feature olarak kaydet
+        setDraftFeature('media', {
+            photos: images,
+            audio: audios,
+            docs: docs
+        });
+
         router.dismiss();
     };
 
@@ -84,7 +95,9 @@ const MediaLayout = () => {
                     headerRight: () => (
                         <TouchableOpacity
                             activeOpacity={0.7}
-                            onPress={() => router.push("media/edit/EditPhoto")}
+                            onPress={() => {
+                                router.push(`/media/edit/EditPhoto?boxId=${currentBoxId}`);
+                            }}
                             style={{
                                 marginRight: 10,
                                 flexDirection: 'row',

@@ -55,6 +55,7 @@ const EditBoxPage = () => {
     const [calKey, setCalKey] = useState('cal-edit-initial');
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const calScreenWidth = Dimensions.get('window').width * 0.85 - 40; // modal width minus padding
 
@@ -185,11 +186,11 @@ const EditBoxPage = () => {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
+                        setIsDeleting(true);
                         const result = await deleteBox(boxDataId);
+                        setIsDeleting(false);
                         if (result.success) {
-                            setTimeout(() => {
-                                router.replace("/(dashboard)/BoxesPage");
-                            }, 100);
+                            router.replace("/(dashboard)/BoxesPage");
                         } else {
                             Alert.alert("Hata", result.error || "Box silinemedi.");
                         }
@@ -200,10 +201,21 @@ const EditBoxPage = () => {
     };
 
     return (
-        // 3. KLAVYE GİZLEME DÜZELTİLDİ: Tüm sayfayı sarmaladık ki boşluğa basınca klavye kapansın
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <ThemedView safe={true} style={styles.container}>
                 <StatusBar style={theme.statusBarStyle} />
+
+                <Modal
+                    visible={isDeleting}
+                    transparent={true}
+                    animationType="fade"
+                    statusBarTranslucent={true}
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                        <ActivityIndicator size="large" color={theme.primary} />
+                        <ThemedText style={{ color: '#fff', marginTop: 12, fontWeight: 'bold', fontSize: 16 }}>Deleting...</ThemedText>
+                    </View>
+                </Modal>
 
                 {/* Ekranın üstündeki Box detail ve edit yazısı*/}
                 <Stack.Screen
@@ -573,7 +585,7 @@ const EditBoxPage = () => {
                             {/* --- MEDIA --- */}
                             {hasMedia && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/media/edit/EditPhotoPage', params: { boxId: boxDataId } })}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`/media/edit/EditPhoto?boxId=${boxDataId}`)}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -650,7 +662,7 @@ const EditBoxPage = () => {
                             {/* --- MEDIA --- */}
                             {!hasMedia && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/media/create/UploadPhoto', params: { boxId: boxDataId } }); }}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push(`/media/create/UploadPhoto?boxId=${boxDataId}`); }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <MaterialCommunityIcons name="paperclip" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
