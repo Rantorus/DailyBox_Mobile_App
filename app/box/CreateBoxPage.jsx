@@ -72,7 +72,8 @@ const CreateBoxPage = () => {
     }, []);
 
     const hasNote = !!(draftFeatures.note && (draftFeatures.note.title || draftFeatures.note.content));
-    const hasLocation = !!(draftFeatures.location && (draftFeatures.location.latitude || draftFeatures.location.address));
+    const locationArray = useMediaStore(state => state.locations) || [];
+    const hasLocation = locationArray.length > 0;
     const hasMedia = !!(draftFeatures.media && (
         (draftFeatures.media.photos && draftFeatures.media.photos.length > 0) ||
         (draftFeatures.media.docs && draftFeatures.media.docs.length > 0) ||
@@ -81,7 +82,11 @@ const CreateBoxPage = () => {
     const hasTodos = !!(Array.isArray(draftFeatures.todo) && draftFeatures.todo.length > 0);
 
     const handleDeleteFeature = (featureType) => {
-        setDraftFeature(featureType, null);
+        if (featureType === 'location') {
+            useMediaStore.getState().locations.forEach(loc => useMediaStore.getState().removeLocation(loc.id));
+        } else {
+            setDraftFeature(featureType, null);
+        }
     };
 
     // 2. USEMEMO İÇERİ ALINDI: Artık kurallara uygun ve dinamik çalışıyor
@@ -145,9 +150,7 @@ const CreateBoxPage = () => {
                 ...(hasNote ? { noteTitle: draftFeatures.note.title, noteContent: draftFeatures.note.content } : {}),
                 hasLocation: hasLocation,
                 ...(hasLocation ? {
-                    locationLat: draftFeatures.location.latitude,
-                    locationLng: draftFeatures.location.longitude,
-                    locationAddress: draftFeatures.location.address
+                    locations: locationArray
                 } : {}),
                 hasMedia: hasMedia,
             };

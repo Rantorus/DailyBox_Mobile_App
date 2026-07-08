@@ -11,7 +11,8 @@ import ThemedInput from '../../components/ThemedInput';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { useMediaStore } from '../../store/mediaStore';
-import { Stack, useRouter } from 'expo-router';
+import { useBoxStore } from '../../store/boxStore';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -66,6 +67,8 @@ export default function UploadLocation() {
     const theme = Colors[themeName];
 
     const router = useRouter();
+    const { boxId } = useLocalSearchParams();
+    const updateBox = useBoxStore(state => state.updateBox);
 
     const mapRef = useRef(null);
 
@@ -73,7 +76,6 @@ export default function UploadLocation() {
     const addLocation = useMediaStore(state => state.addLocation);
     const removeLocation = useMediaStore(state => state.removeLocation);
 
-    const [localLocations, setLocalLocations] = useState([]);
     const [isMapVisible, setIsMapVisible] = useState(false);
     const [showTitleModal, setShowTitleModal] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -176,7 +178,7 @@ export default function UploadLocation() {
 
         setIsLoading(true);
 
-        let suggestedTitle = `Location ${locations.length + localLocations.length + 1}`;
+        let suggestedTitle = `Location ${locations.length + 1}`;
         let fullAddress = "Açık adres bulunamadı";
 
         try {
@@ -222,7 +224,6 @@ export default function UploadLocation() {
         };
 
         addLocation(newLocation);
-        setLocalLocations(prev => [...prev, newLocation]);
 
         setShowTitleModal(false);
         setIsMapVisible(false);
@@ -232,10 +233,20 @@ export default function UploadLocation() {
 
     const handleRemoveLocal = (id) => {
         removeLocation(id);
-        setLocalLocations(prev => prev.filter(loc => loc.id !== id));
     };
 
-    function handleSave() {
+    const handleSave = async () => {
+        if (boxId) {
+            setIsLoading(true);
+            const locs = useMediaStore.getState().locations;
+            const result = await updateBox(boxId, { locations: locs, hasLocation: locs.length > 0 });
+            setIsLoading(false);
+            
+            if (!result.success) {
+                Alert.alert("Hata", result.error || "Konumlar güncellenemedi.");
+                return;
+            }
+        }
         router.back();
     }
 
@@ -277,7 +288,7 @@ export default function UploadLocation() {
             <View style={styles.contentContainer}>
                 {isLoading && !isMapVisible && <ActivityIndicator size="large" color={theme.primary} style={{ marginBottom: 10 }} />}
 
-                {localLocations.length === 0 ? (
+                {locations.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={[styles.dashedBox, { borderColor: theme.primary }]}>
                             <Ionicons name="map-outline" size={40} color={theme.primary} style={{ marginBottom: 15 }} />
@@ -292,10 +303,10 @@ export default function UploadLocation() {
                 ) : (
                     <View style={{ flex: 1 }}>
                         <ThemedText style={{ color: theme.textLight, fontSize: 13, marginBottom: 15, marginLeft: 5 }}>
-                            {`${localLocations.length} location${localLocations.length > 1 ? 's' : ''} added`}
+                            {`${locations.length} location${locations.length > 1 ? 's' : ''} added`}
                         </ThemedText>
                         <FlatList
-                            data={localLocations}
+                            data={locations}
                             keyExtractor={item => item.id}
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 20 }}

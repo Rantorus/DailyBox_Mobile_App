@@ -34,6 +34,7 @@ export const useMediaStore = create((set) => ({
     })),
 
     locations: [],
+    setLocations: (locs) => set({ locations: locs }),
     addLocation: (newLocation) => set(state => ({
         locations: [...state.locations, newLocation]
     })),

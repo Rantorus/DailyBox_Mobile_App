@@ -189,7 +189,13 @@ const BoxDetail = () => {
             {(boxData.has_location || boxData.hasLocation) && (
                 <>
                     <Spacer height={5} />
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push(`location/ViewLocation`)}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                        useMediaStore.getState().setLocations(boxData.locations || []);
+                        router.push({
+                            pathname: `location/ViewLocation`,
+                            params: { boxId: boxData.id }
+                        });
+                    }}>
                         <ThemedCard style={styles.noteCard}>
                             <Ionicons name="location" size={24} color={theme.primary} />
 

@@ -9,7 +9,7 @@ import ThemedText from '../../components/ThemedText';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { useMediaStore } from '../../store/mediaStore';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -66,6 +66,7 @@ export default function ViewLocation() {
     const theme = Colors[themeName];
 
     const router = useRouter();
+    const { boxId } = useLocalSearchParams();
 
     const mapRef = useRef(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -128,8 +129,7 @@ export default function ViewLocation() {
                             onPress={() => {
                                 router.push({
                                     pathname: "/location/EditLocation",
-                                    params: {
-                                    }
+                                    params: { boxId: boxId }
                                 });
                             }}
                             style={[styles.editButton, {

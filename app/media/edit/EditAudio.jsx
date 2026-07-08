@@ -377,12 +377,17 @@ export default function EditAudio() {
             <StatusBar style={theme.statusBarStyle} />
 
             <View style={styles.contentContainer}>
-                {isUploading && (
-                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15 }}>
+                <Modal
+                    visible={isUploading}
+                    transparent={true}
+                    animationType="fade"
+                    statusBarTranslucent={true}
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' }}>
                         <ActivityIndicator size="large" color={theme.primary} />
-                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>Processing...</ThemedText>
+                        <ThemedText style={{ color: '#fff', marginTop: 12, fontWeight: 'bold', fontSize: 16 }}>Processing...</ThemedText>
                     </View>
-                )}
+                </Modal>
                 
                 {audios.length === 0 ? (
                     /* BOŞ EKRAN DURUMU */

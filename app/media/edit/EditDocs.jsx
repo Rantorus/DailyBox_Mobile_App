@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Alert, ActivityIndicator, Linking } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, Alert, ActivityIndicator, Linking, Modal } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { File, Paths } from 'expo-file-system/next';
@@ -241,14 +241,17 @@ export default function EditDocs() {
 
             {/* İÇERİK */}
             <View style={styles.contentContainer}>
-                {isUploading && (
-                    <View style={styles.loadingOverlay}>
+                <Modal
+                    visible={isUploading}
+                    transparent={true}
+                    animationType="fade"
+                    statusBarTranslucent={true}
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' }}>
                         <ActivityIndicator size="large" color={theme.primary} />
-                        <ThemedText style={{ marginTop: 10, color: theme.primary, fontWeight: 'bold' }}>
-                            Processing...
-                        </ThemedText>
+                        <ThemedText style={{ color: '#fff', marginTop: 12, fontWeight: 'bold', fontSize: 16 }}>Processing...</ThemedText>
                     </View>
-                )}
+                </Modal>
                 
                 {docs.length === 0 ? (
                     // BOŞ DURUM EKRANI

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import { useBoxStore } from '../../store/boxStore';
+import { useMediaStore } from '../../store/mediaStore';
 import { Alert, ActivityIndicator, Modal } from 'react-native';
 import { CalendarList } from 'react-native-calendars';
 import api from '../../services/api';
@@ -63,7 +64,7 @@ const EditBoxPage = () => {
 
     // Veritabanındaki has_* bayraklarını ve içeriklerini kontrol ediyoruz
     const hasNote = boxData?.has_note || !!boxData?.note_content || !!boxData?.note_title;
-    const hasLocation = boxData?.has_location || !!boxData?.location_lat;
+    const hasLocation = boxData?.has_location || (Array.isArray(boxData?.locations) && boxData.locations.length > 0);
     const hasMedia = boxData?.has_media || 
                      (Array.isArray(boxData?.media_photos) && boxData.media_photos.length > 0) || 
                      (Array.isArray(boxData?.media_docs) && boxData.media_docs.length > 0) || 
@@ -92,7 +93,7 @@ const EditBoxPage = () => {
         if (featureType === 'note') {
             updatePayload = { hasNote: false, noteTitle: null, noteContent: null };
         } else if (featureType === 'location') {
-            updatePayload = { hasLocation: false, locationAddress: null, locationLat: null, locationLng: null };
+            updatePayload = { hasLocation: false, locations: [] };
         } else if (featureType === 'media') {
             updatePayload = { hasMedia: false, mediaPhotos: [], mediaDocs: [], mediaAudio: [] };
         } else if (featureType === 'todos') {
@@ -568,7 +569,10 @@ const EditBoxPage = () => {
                             {/* --- LOCATION --- */}
                             {hasLocation && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => router.push({ pathname: '/location/EditLocationPage', params: { boxId: boxDataId } })}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                        useMediaStore.getState().setLocations(boxData.locations || []);
+                                        router.push({ pathname: '/location/EditLocation', params: { boxId: boxDataId } });
+                                    }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="location" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />
@@ -645,7 +649,10 @@ const EditBoxPage = () => {
                             {/* --- LOCATION --- */}
                             {!hasLocation && (
                                 <>
-                                    <TouchableOpacity activeOpacity={0.7} onPress={() => { router.push({ pathname: '/location/UploadLocation', params: { boxId: boxDataId } }); }}>
+                                    <TouchableOpacity activeOpacity={0.7} onPress={() => {
+                                        useMediaStore.getState().setLocations(boxData.locations || []);
+                                        router.push({ pathname: '/location/UploadLocation', params: { boxId: boxDataId } });
+                                    }}>
                                         <ThemedCard style={styles.noteCard}>
                                             <Ionicons name="location" size={24} color={theme.primary} />
                                             <View style={[styles.featureDividerLine, { backgroundColor: theme.text }]} />

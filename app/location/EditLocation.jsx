@@ -11,7 +11,8 @@ import ThemedInput from '../../components/ThemedInput';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 import { useMediaStore } from '../../store/mediaStore';
-import { Stack, useRouter } from 'expo-router';
+import { useBoxStore } from '../../store/boxStore';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -67,6 +68,8 @@ export default function EditLocation() {
     const theme = Colors[themeName];
 
     const router = useRouter();
+    const { boxId } = useLocalSearchParams();
+    const updateBox = useBoxStore(state => state.updateBox);
     const mapRef = useRef(null);
 
     // GLOBAL STORE (Yerel vitrin yok, her şey doğrudan ana depodan okunup yazılır)
@@ -259,7 +262,20 @@ export default function EditLocation() {
                     headerRight: () => (
                         <TouchableOpacity
                             activeOpacity={0.7}
-                            onPress={() => router.back()}
+                            onPress={async () => {
+                                if (boxId) {
+                                    setIsLoading(true);
+                                    const locs = useMediaStore.getState().locations;
+                                    const result = await updateBox(boxId, { locations: locs, hasLocation: locs.length > 0 });
+                                    setIsLoading(false);
+                                    
+                                    if (!result.success) {
+                                        Alert.alert("Hata", result.error || "Konumlar güncellenemedi.");
+                                        return;
+                                    }
+                                }
+                                router.back();
+                            }}
                             style={[styles.editButton, { backgroundColor: theme.primary + '20' }]}
                         >
                             <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
