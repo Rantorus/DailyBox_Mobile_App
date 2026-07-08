@@ -217,7 +217,65 @@ export const useBoxStore = create((set, get) => ({
             return { success: false, error: errorMsg };
         }
     },
+    // 9. Döküman Yükle (POST /api/media/box/:boxId/doc)
+    uploadBoxDoc: async (boxId, docUri, mimeType, fileName, displayName) => {
+        try {
+            const formData = new FormData();
+            formData.append('doc', {
+                uri: docUri,
+                type: mimeType || 'application/octet-stream',
+                name: fileName || `doc_${Date.now()}`,
+            });
+            if (displayName) {
+                formData.append('displayName', displayName);
+            }
 
-    // 9. State'i temizle (Logout olduğunda çağrılmalı)
+            const response = await api.post(`/media/box/${boxId}/doc`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const updatedDocs = response.data.data;
+
+            set((state) => ({
+                boxes: state.boxes.map(bx =>
+                    String(bx.id) === String(boxId)
+                        ? { ...bx, media_docs: updatedDocs, has_media: true }
+                        : bx
+                )
+            }));
+            return { success: true, data: updatedDocs };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Döküman yüklenemedi.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // 10. Döküman Sil (DELETE /api/media/box/:boxId/doc)
+    deleteBoxDoc: async (boxId, docUrl) => {
+        try {
+            const response = await api.delete(`/media/box/${boxId}/doc`, {
+                data: { url: docUrl }
+            });
+
+            const updatedDocs = response.data.data;
+
+            set((state) => ({
+                boxes: state.boxes.map(bx => {
+                    if (bx.id === boxId) {
+                        return { ...bx, media_docs: updatedDocs };
+                    }
+                    return bx;
+                })
+            }));
+            return { success: true, data: updatedDocs };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Döküman silinemedi.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // 11. State'i temizle (Logout olduğunda çağrılmalı)
     clearBox: () => set({ boxes: [], error: null })
 }))

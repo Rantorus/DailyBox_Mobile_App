@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing'; // Dosyaları açmak/paylaşmak için
@@ -11,6 +11,8 @@ import ThemedText from '../../../components/ThemedText';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useLocalSearchParams } from 'expo-router';
+import { useBoxStore } from '../../../store/boxStore';
 
 
 // ALT BİLEŞEN: BELGE KARTI (DOC PLAYER/VIEWER)
@@ -73,7 +75,7 @@ const DocCard = ({ item, theme, onRemove }) => {
             </View>
 
             {/* SAĞ: Silme Butonu */}
-            <TouchableOpacity onPress={() => onRemove(item.id)} style={{ padding: 10 }}>
+            <TouchableOpacity onPress={() => onRemove(item.id, item.uri)} style={{ padding: 10 }}>
                 <Ionicons name="trash-outline" size={22} color="rgba(239, 68, 68, 0.9)" />
             </TouchableOpacity>
         </TouchableOpacity>
@@ -87,23 +89,57 @@ export default function UploadDocs() {
     const theme = Colors[themeName];
 
     // GLOBAL STORE 
+    const docs = useMediaStore(state => state.docs);
     const addDoc = useMediaStore(state => state.addDoc);
     const removeDoc = useMediaStore(state => state.removeDoc);
 
-    // YEREL VİTRİN (Sadece bu ekran açıkken eklenenleri tutar, başlangıçta boştur)
-    const [localDocs, setLocalDocs] = useState([]);
+    // YEREL VİTRİN (Eğer draft modundaysa store'daki dokümanlarla başlar)
+    const [localDocs, setLocalDocs] = useState(docs);
 
-    // YEREL VE GLOBAL SİLME İŞLEMİ
-    const handleRemoveLocal = (id) => {
+    // ==========================================
+    const handleRemoveLocal = async (id, uri) => {
+        // DRAFT SİLME
+        try {
+            const file = new File(uri);
+            if (file.exists) file.delete();
+        } catch (e) {
+            console.error("Dosya silinemedi:", e);
+        }
         removeDoc(id);
         setLocalDocs(prev => prev.filter(doc => doc.id !== id));
+    };
+
+    const saveDocToLocal = async (asset) => {
+        const originalName = asset.name || 'document.pdf';
+        
+        const sourceFile = new File(asset.uri);
+        const match = /\.(\w+)$/.exec(originalName);
+        const ext = match ? match[1] : 'pdf';
+        const uniqueFileName = `${Date.now()}_doc.${ext}`;
+        const destinationFile = new File(Paths.document, uniqueFileName);
+
+        try {
+            await sourceFile.copy(destinationFile);
+            const newDoc = {
+                id: Date.now().toString(),
+                uri: destinationFile.uri,
+                name: originalName, 
+                size: asset.size,
+                date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+            };
+
+            addDoc(newDoc); // Doğrudan global depoya eklenir
+            setLocalDocs(prev => [...prev, newDoc]);
+        } catch (error) {
+            console.error("Kopyalama Hatası:", error);
+            Alert.alert("Error", "Could not copy document.");
+        }
     };
 
     // ==========================================
     // DOSYA SEÇME VE FİLTRELEME
     // ==========================================
     const pickDocument = async () => {
-        // İzin verilen MIME (Dosya) tipleri. Ses, fotoğraf, zip, apk vb. engellendi.
         const allowedTypes = [
             'application/pdf',
             'application/msword',
@@ -116,38 +152,13 @@ export default function UploadDocs() {
         ];
 
         let result = await DocumentPicker.getDocumentAsync({
-            type: allowedTypes, // Sadece belirlediğimiz ofis ve belge uzantıları seçilebilir
+            type: allowedTypes, 
             copyToCacheDirectory: true,
-            multiple: false, // Şimdilik tek tek yükleme mantığı
+            multiple: false, 
         });
 
         if (!result.canceled) {
-            try {
-                const asset = result.assets[0];
-                const sourceFile = new File(asset.uri);
-                
-                const originalName = asset.name || 'document.pdf';
-                const uniqueFileName = `${Date.now()}_${originalName.replace(/\s+/g, '_')}`;
-                
-                const destinationFile = new File(Paths.document, uniqueFileName);
-
-                await sourceFile.copy(destinationFile);
-
-                const newDoc = {
-                    id: Date.now().toString(),
-                    uri: destinationFile.uri,
-                    name: originalName, 
-                    size: asset.size, // DocumentPicker size bilgisini bayt cinsinden verir
-                    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                };
-
-                addDoc(newDoc); // GLOBAL DEPOYA EKLE
-                setLocalDocs(prev => [...prev, newDoc]); // YEREL VİTRİNE EKLE
-
-            } catch (error) {
-                Alert.alert("Error", "Could not add document.");
-                console.error("Dosya Kopyalama Hatası:", error);
-            }
+            await saveDocToLocal(result.assets[0]);
         }
     };
 
@@ -160,6 +171,7 @@ export default function UploadDocs() {
 
             {/* İÇERİK - Yerel Vitrin Gösterimi */}
             <View style={styles.contentContainer}>
+
                 {localDocs.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={[styles.dashedBox, { borderColor: theme.primary }]}>
@@ -212,6 +224,8 @@ const styles = StyleSheet.create({
     // Boş Ekran Stilleri
     emptyState: { flex: 1, justifyContent: 'center', paddingHorizontal: 10 },
     dashedBox: { borderWidth: 1.5, borderStyle: 'dashed', padding: 40, alignItems: 'center', borderRadius: 15, backgroundColor: 'transparent' },
+    
+    loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10, borderRadius: 15 },
     
     // Kart Stilleri
     docCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 15, borderWidth: 1, marginBottom: 12 },

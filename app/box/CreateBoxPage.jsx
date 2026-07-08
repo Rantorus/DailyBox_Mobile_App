@@ -55,6 +55,7 @@ const CreateBoxPage = () => {
     const createBox = useBoxStore(state => state.createBox);
     const uploadBoxPhoto = useBoxStore(state => state.uploadBoxPhoto);
     const uploadBoxAudio = useBoxStore(state => state.uploadBoxAudio);
+    const uploadBoxDoc = useBoxStore(state => state.uploadBoxDoc);
     const isLoading = useBoxStore(state => state.isLoading);
 
     // Draft Features
@@ -202,6 +203,24 @@ const CreateBoxPage = () => {
                         const resAudio = await uploadBoxAudio(result.data.id, audio.uri, mimeType, safeName, displayName);
                         if (!resAudio.success) {
                             Alert.alert("Ses Yüklenemedi", resAudio.error);
+                        }
+                    }
+                }
+
+                // Draft media docs yükleyelim
+                if (hasMedia && draftFeatures.media && draftFeatures.media.docs && draftFeatures.media.docs.length > 0) {
+                    for (let doc of draftFeatures.media.docs) {
+                        const originalFilename = doc.name || `document_${Date.now()}.pdf`;
+                        const match = /\.(\w+)$/.exec(originalFilename);
+                        const ext = match ? match[1] : 'pdf';
+                        const mimeType = 'application/octet-stream';
+                        
+                        const safeName = `doc_${Date.now()}.${ext}`;
+                        const displayName = originalFilename;
+                        
+                        const resDoc = await uploadBoxDoc(result.data.id, doc.uri, mimeType, safeName, displayName);
+                        if (!resDoc.success) {
+                            Alert.alert("Döküman Yüklenemedi", resDoc.error);
                         }
                     }
                 }

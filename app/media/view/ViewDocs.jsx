@@ -1,5 +1,6 @@
-import React from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, TouchableOpacity, FlatList, Alert, Linking, ActivityIndicator } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -9,24 +10,57 @@ import ThemedText from '../../../components/ThemedText';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useBoxStore } from '../../../store/boxStore';
+import { useLocalSearchParams } from 'expo-router';
 
 // ==========================================
 // ALT BİLEŞEN: SADECE OKUNUR (READ-ONLY) BELGE KARTI
 // ==========================================
 const DocCardReadOnly = ({ item, theme }) => {
+    const [isDownloading, setIsDownloading] = useState(false);
     
-    // Tıklandığında cihazın kendi PDF/Word okuyucusunda aç
+    // Tıklandığında cihazın kendi PDF/Word okuyucusunda veya tarayıcıda aç
     const handleOpenDoc = async () => {
         try {
-            const isAvailable = await Sharing.isAvailableAsync();
-            if (isAvailable) {
-                await Sharing.shareAsync(item.uri, {
-                    dialogTitle: 'Belgeyi Aç',
-                });
+            if (item.uri.startsWith('http')) {
+                setIsDownloading(true);
+                
+                // Güvenli ve temiz bir dosya adı oluştur (sadece harfler, sayılar, noktalar, tire ve altçizgi)
+                let safeName = item.name ? item.name.replace(/[^a-zA-Z0-9.\-_]/g, '_') : `doc_${Date.now()}.pdf`;
+                // Eğer isimsiz kalırsa varsayılan
+                if (safeName.length < 3) safeName = `doc_${Date.now()}.pdf`;
+                
+                const fileUri = FileSystem.cacheDirectory + safeName;
+                
+                // Daha önce indirilmiş mi kontrol et
+                const fileInfo = await FileSystem.getInfoAsync(fileUri);
+                
+                if (!fileInfo.exists) {
+                    await FileSystem.downloadAsync(item.uri, fileUri);
+                }
+                
+                setIsDownloading(false);
+                
+                const isAvailable = await Sharing.isAvailableAsync();
+                if (isAvailable) {
+                    await Sharing.shareAsync(fileUri, {
+                        dialogTitle: 'Belgeyi Aç',
+                    });
+                } else {
+                    Alert.alert("Error", "File sharing or opening is not supported on this device.");
+                }
             } else {
-                Alert.alert("Error", "File sharing or opening is not supported on this device.");
+                const isAvailable = await Sharing.isAvailableAsync();
+                if (isAvailable) {
+                    await Sharing.shareAsync(item.uri, {
+                        dialogTitle: 'Belgeyi Aç',
+                    });
+                } else {
+                    Alert.alert("Error", "File sharing or opening is not supported on this device.");
+                }
             }
         } catch (error) {
+            setIsDownloading(false);
             console.error("Dosya açılamadı:", error);
             Alert.alert("Error", "An error occurred while opening the file.");
         }
@@ -56,7 +90,11 @@ const DocCardReadOnly = ({ item, theme }) => {
         >
             {/* SOL: İkon */}
             <View style={[styles.iconContainer, { backgroundColor: theme.primary + '15' }]}>
-                <Ionicons name={getFileIcon(item.name)} size={24} color={theme.primary} />
+                {isDownloading ? (
+                    <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                    <Ionicons name={getFileIcon(item.name)} size={24} color={theme.primary} />
+                )}
             </View>
             
             {/* ORTA: Dosya Bilgileri */}
@@ -81,8 +119,36 @@ export default function ViewDocs() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
-    // Global store'dan sadece okuma yapıyoruz (addDoc veya removeDoc'a ihtiyacımız yok)
-    const docs = useMediaStore(state => state.docs);
+    // BACKEND & PARAMETRELER
+    const params = useLocalSearchParams();
+    const storeBoxId = useMediaStore(state => state.currentBoxId);
+    const boxId = params.boxId || storeBoxId;
+
+    const boxes = useBoxStore(state => state.boxes);
+
+    // BOX DATA'YI BUL VE PARSE ET
+    const boxData = boxes.find((data) => String(data.id) === String(boxId));
+    
+    // Box verisinden dokümanları çekiyoruz (Artık db'den obje olarak geliyor: { url, name })
+    const docs = boxData?.media_docs?.map((media, index) => {
+        let originalName = media.name || (media.url ? media.url.split('/').pop() : media);
+        
+        try {
+            if (originalName) {
+                originalName = decodeURIComponent(originalName);
+            }
+        } catch (e) {
+            // Decoding başarısız olursa orijinal haliyle kalsın
+        }
+        
+        return {
+            id: media.url || index.toString(),
+            uri: media.url || media.uri || media,
+            name: originalName,
+            size: media.size,
+            date: media.date
+        };
+    }) || [];
 
     return (
         <ThemedView style={styles.container} safe={true}>
@@ -104,9 +170,10 @@ export default function ViewDocs() {
                         <ThemedText style={{ color: theme.textLight, fontSize: 13, marginBottom: 15, marginLeft: 5 }}>
                             {`${docs.length} document${docs.length > 1 ? 's' : ''}`}
                         </ThemedText>
+                        
                         <FlatList
                             data={docs}
-                            keyExtractor={item => item.id}
+                            keyExtractor={(item, index) => item.id || index.toString()}
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 20 }}
                             renderItem={({ item }) => (

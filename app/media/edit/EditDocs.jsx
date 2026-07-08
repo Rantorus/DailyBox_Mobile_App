@@ -1,6 +1,7 @@
-import React from 'react';
-import { StyleSheet, View, TouchableOpacity, FlatList, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, TouchableOpacity, FlatList, Alert, ActivityIndicator, Linking } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,24 +12,56 @@ import ThemedText from '../../../components/ThemedText';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useBoxStore } from '../../../store/boxStore';
+import { useLocalSearchParams } from 'expo-router';
 
 // ==========================================
 // ALT BİLEŞEN: BELGE KARTI (DÜZENLEME MODU)
 // ==========================================
 const DocCardEdit = ({ item, theme, onRemove }) => {
+    const [isDownloading, setIsDownloading] = useState(false);
     
-    // Tıklandığında cihazın kendi PDF/Word okuyucusunda aç
+    // Tıklandığında cihazın kendi PDF/Word okuyucusunda veya tarayıcıda aç
     const handleOpenDoc = async () => {
         try {
-            const isAvailable = await Sharing.isAvailableAsync();
-            if (isAvailable) {
-                await Sharing.shareAsync(item.uri, {
-                    dialogTitle: 'Belgeyi Aç',
-                });
+            if (item.uri.startsWith('http')) {
+                setIsDownloading(true);
+                
+                // Güvenli ve temiz bir dosya adı oluştur
+                let safeName = item.name ? item.name.replace(/[^a-zA-Z0-9.\-_]/g, '_') : `doc_${Date.now()}.pdf`;
+                if (safeName.length < 3) safeName = `doc_${Date.now()}.pdf`;
+                
+                const fileUri = FileSystem.cacheDirectory + safeName;
+                
+                // Daha önce indirilmiş mi kontrol et
+                const fileInfo = await FileSystem.getInfoAsync(fileUri);
+                
+                if (!fileInfo.exists) {
+                    await FileSystem.downloadAsync(item.uri, fileUri);
+                }
+                
+                setIsDownloading(false);
+                
+                const isAvailable = await Sharing.isAvailableAsync();
+                if (isAvailable) {
+                    await Sharing.shareAsync(fileUri, {
+                        dialogTitle: 'Belgeyi Aç',
+                    });
+                } else {
+                    Alert.alert("Error", "File sharing or opening is not supported on this device.");
+                }
             } else {
-                Alert.alert("Error", "File sharing or opening is not supported on this device.");
+                const isAvailable = await Sharing.isAvailableAsync();
+                if (isAvailable) {
+                    await Sharing.shareAsync(item.uri, {
+                        dialogTitle: 'Belgeyi Aç',
+                    });
+                } else {
+                    Alert.alert("Error", "File sharing or opening is not supported on this device.");
+                }
             }
         } catch (error) {
+            setIsDownloading(false);
             console.error("Could not open file:", error);
             Alert.alert("Error", "An error occurred while opening the file.");
         }
@@ -58,7 +91,11 @@ const DocCardEdit = ({ item, theme, onRemove }) => {
         >
             {/* SOL: İkon */}
             <View style={[styles.iconContainer, { backgroundColor: theme.primary + '15' }]}>
-                <Ionicons name={getFileIcon(item.name)} size={24} color={theme.primary} />
+                {isDownloading ? (
+                    <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                    <Ionicons name={getFileIcon(item.name)} size={24} color={theme.primary} />
+                )}
             </View>
             
             {/* ORTA: Dosya Bilgileri */}
@@ -86,11 +123,37 @@ export default function EditDocs() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
 
-    // GLOBAL STORE 
-    // Edit ekranında "Yerel Vitrin" olmaz. Doğrudan ana depoyu (global) okuyup düzenleriz.
-    const docs = useMediaStore(state => state.docs);
-    const addDoc = useMediaStore(state => state.addDoc);
-    const removeDoc = useMediaStore(state => state.removeDoc);
+    // BACKEND & PARAMETRELER
+    const params = useLocalSearchParams();
+    const storeBoxId = useMediaStore(state => state.currentBoxId);
+    const boxId = params.boxId || storeBoxId;
+
+    const boxes = useBoxStore(state => state.boxes);
+    const uploadBoxDoc = useBoxStore(state => state.uploadBoxDoc);
+    const deleteBoxDoc = useBoxStore(state => state.deleteBoxDoc);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // BOX DATA'YI BUL VE PARSE ET
+    const boxData = boxes.find((data) => String(data.id) === String(boxId));
+    
+    // Box verisinden dokümanları çekiyoruz
+    const docs = boxData?.media_docs?.map((media, index) => {
+        let originalName = media.name || (media.url ? media.url.split('/').pop() : media);
+        
+        try {
+            if (originalName) {
+                originalName = decodeURIComponent(originalName);
+            }
+        } catch (e) {}
+        
+        return {
+            id: media.url || index.toString(),
+            uri: media.url || media.uri || media,
+            name: originalName,
+            size: media.size,
+            date: media.date
+        };
+    }) || [];
 
     // ==========================================
     // SİLME İŞLEMİ (ONAYLI VE GÜVENLİ)
@@ -105,15 +168,15 @@ export default function EditDocs() {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        try {
-                            // Cihaz hafızasından dosyayı tamamen sil
-                            const file = new File(uri);
-                            if (file.exists) file.delete();
-                        } catch (e) {
-                            console.error("Dosya silinemedi:", e);
+                        setIsUploading(true);
+                        // Backend üzerinden sil
+                        const docUrl = uri || id; // Edit modunda id veya uri URL'yi taşıyor olabilir
+                        const result = await deleteBoxDoc(boxId, docUrl);
+                        setIsUploading(false);
+
+                        if (!result.success) {
+                            Alert.alert("Error", result.error || "Could not delete document.");
                         }
-                        // Zustand store'dan kaldır
-                        removeDoc(id);
                     }
                 }
             ]
@@ -144,27 +207,27 @@ export default function EditDocs() {
         if (!result.canceled) {
             try {
                 const asset = result.assets[0];
-                const sourceFile = new File(asset.uri);
-                
                 const originalName = asset.name || 'document.pdf';
-                const uniqueFileName = `${Date.now()}_${originalName.replace(/\s+/g, '_')}`;
-                const destinationFile = new File(Paths.document, uniqueFileName);
+                
+                setIsUploading(true);
+                
+                // Güvenli dosya adı oluşturma
+                const match = /\.(\w+)$/.exec(originalName);
+                const ext = match ? match[1] : 'pdf';
+                const safeName = `doc_${Date.now()}.${ext}`;
+                const displayName = originalName;
 
-                await sourceFile.copy(destinationFile);
+                const uploadResult = await uploadBoxDoc(boxId, asset.uri, asset.mimeType, safeName, displayName);
+                setIsUploading(false);
 
-                const newDoc = {
-                    id: Date.now().toString(),
-                    uri: destinationFile.uri,
-                    name: originalName, 
-                    size: asset.size,
-                    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                };
-
-                addDoc(newDoc); // Doğrudan global depoya eklenir ve liste anında güncellenir
+                if (!uploadResult.success) {
+                    Alert.alert("Error", uploadResult.error || "Could not add document.");
+                }
 
             } catch (error) {
+                setIsUploading(false);
                 Alert.alert("Error", "Could not add document.");
-                console.error("File Copy Error:", error);
+                console.error("File Upload Error:", error);
             }
         }
     };
@@ -178,6 +241,15 @@ export default function EditDocs() {
 
             {/* İÇERİK */}
             <View style={styles.contentContainer}>
+                {isUploading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color={theme.primary} />
+                        <ThemedText style={{ marginTop: 10, color: theme.primary, fontWeight: 'bold' }}>
+                            Processing...
+                        </ThemedText>
+                    </View>
+                )}
+                
                 {docs.length === 0 ? (
                     // BOŞ DURUM EKRANI
                     <View style={styles.emptyState}>
@@ -200,7 +272,8 @@ export default function EditDocs() {
                         
                         <FlatList
                             data={docs}
-                            keyExtractor={item => item.id}
+                            // API'dan gelen URL id olarak kullanılabilir
+                            keyExtractor={(item, index) => item.id || index.toString()}
                             showsVerticalScrollIndicator={false}
                             contentContainerStyle={{ paddingBottom: 20 }}
                             renderItem={({ item }) => (
@@ -234,6 +307,8 @@ const styles = StyleSheet.create({
     // Boş Ekran Stilleri
     emptyState: { flex: 1, justifyContent: 'center', paddingHorizontal: 10 },
     dashedBox: { borderWidth: 1.5, borderStyle: 'dashed', padding: 40, alignItems: 'center', borderRadius: 15, backgroundColor: 'transparent' },
+    
+    loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10, borderRadius: 15 },
     
     // Kart Stilleri
     docCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 15, borderWidth: 1, marginBottom: 12 },
