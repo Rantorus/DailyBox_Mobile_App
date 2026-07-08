@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView, Image, Modal, Alert, Dimensions } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ScrollView, Image, Modal, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +26,10 @@ const THEME_OPTIONS = [
   { id: 'oceanTheme', label: 'Deep Ocean', icon: 'water' },
   { id: 'forestTheme', label: 'Forest Green', icon: 'leaf' },
   { id: 'coffeeTheme', label: 'Coffee', icon: 'cafe' },
+  { id: 'burgundyTheme', label: 'Deep Burgundy', icon: 'wine' },
+  { id: 'jungleTheme', label: 'Jungle Soda', icon: 'paw' },
+  { id: 'plumTheme', label: 'Plum Snow', icon: 'snow' },
+  { id: 'rustTheme', label: 'Rust Pearl', icon: 'bonfire' },
 ];
 
 export default function ProfilePage() {
@@ -38,6 +42,9 @@ export default function ProfilePage() {
   // ==========================================
   const activeUser = useUserStore((state) => state.activeUser);
   const logoutUser = useUserStore((state) => state.logoutUser);
+  const deleteAccount = useUserStore((state) => state.deleteAccount);
+  const uploadAvatar = useUserStore((state) => state.uploadAvatar);
+  const isDeletingAccount = useUserStore((state) => state.isDeleting);
 
   const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
   const setBiometricEnabled = useUserStore(state => state.setBiometricEnabled);
@@ -47,13 +54,15 @@ export default function ProfilePage() {
   // ==========================================
   // İleride bu veriyi Zustand store'da (activeUser.profilePic vb.) tutabilirsin
   const [profileImage, setProfileImage] = useState(null); 
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
+  const [isThemesVisible, setIsThemesVisible] = useState(false);
 
   // ==========================================
   // DİNAMİK VERİ HESAPLAMALARI
   // ==========================================
-  const activeUserName = activeUser?.name || activeUser?.fullName || "Bilinmeyen Kullanıcı";
-  const activeUserEmail = activeUser?.email || "E-posta bulunamadı";
+  const activeUserName = activeUser?.full_name || activeUser?.fullName || "Unknown User";
+  const activeUserEmail = activeUser?.email || "Email not found";
 
   const chapters = useChapterStore((state) => state.chapters);
   const boxes = useBoxStore((state) => state.boxes);
@@ -72,13 +81,13 @@ export default function ProfilePage() {
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!compatible || !enrolled) {
-        Alert.alert('Desteklenmiyor', 'Cihazınızda kayıtlı parmak izi veya Face ID bulunamadı.');
+        Alert.alert('Not Supported', 'No registered fingerprint or Face ID found on your device.');
         return;
       }
 
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Kimliğinizi doğrulayın',
-        cancelLabel: 'İptal',
+        promptMessage: 'Verify your identity',
+        cancelLabel: 'Cancel',
       });
 
       if (result.success) {
@@ -96,7 +105,7 @@ export default function ProfilePage() {
     if (useCamera) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('İzin Gerekli', 'Kamera izni vermeniz gerekiyor.');
+        Alert.alert('Permission Required', 'Camera access is required.');
         return;
       }
       result = await ImagePicker.launchCameraAsync({
@@ -107,7 +116,7 @@ export default function ProfilePage() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('İzin Gerekli', 'Galeri izni vermeniz gerekiyor.');
+        Alert.alert('Permission Required', 'Gallery access is required.');
         return;
       }
       result = await ImagePicker.launchImageLibraryAsync({
@@ -118,30 +127,63 @@ export default function ProfilePage() {
     }
 
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const selectedUri = result.assets[0].uri;
+      setProfileImage(selectedUri); // Geçici olarak lokalde göster
+      
+      // Sunucuya yükle
+      setIsUploadingAvatar(true);
+      const uploadResult = await uploadAvatar(selectedUri);
+      setIsUploadingAvatar(false);
+
+      if (!uploadResult.success) {
+          Alert.alert("Upload Failed", uploadResult.error || "Failed to upload avatar.");
+      }
     }
   };
 
   // KAMERA VE GALERİ SEÇENEKLERİNİ SUNAN ALERT
   const showImageOptions = () => {
     Alert.alert(
-      "Profil Fotoğrafı",
-      "Fotoğraf eklemek için bir yöntem seçin",
+      "Profile Photo",
+      "Choose a method to add a photo",
       [
-        { text: "Kamera", onPress: () => pickImage(true) },
-        { text: "Galeri", onPress: () => pickImage(false) },
-        { text: "İptal", style: "cancel" }
+        { text: "Camera", onPress: () => pickImage(true) },
+        { text: "Gallery", onPress: () => pickImage(false) },
+        { text: "Cancel", style: "cancel" }
       ]
     );
   };
 
   // AVATARA TIKLANDIĞINDA NE OLACAK?
   const handleAvatarPress = () => {
-    if (profileImage) {
+    if (activeUser?.avatar || profileImage) {
       setIsPhotoModalVisible(true); // Foto varsa büyük modülü aç
     } else {
       showImageOptions(); // Foto yoksa doğrudan seçenekleri sun
     }
+  };
+
+  // HESABI SİLME ONAYI
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            const result = await deleteAccount();
+            if (result.success) {
+              router.replace("/");
+            } else {
+              Alert.alert("Error", result.error || "Failed to delete account");
+            }
+          }
+        }
+      ]
+    );
   };
 
   // ==========================================
@@ -185,8 +227,12 @@ export default function ProfilePage() {
             activeOpacity={0.8}
             style={[styles.avatarBox, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}
           >
-            {profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+            {isUploadingAvatar ? (
+                <View style={[styles.avatarImage, { justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="refresh" size={24} color={theme.textLight} />
+                </View>
+            ) : activeUser?.avatar || profileImage ? (
+                <Image source={{ uri: activeUser?.avatar || profileImage }} style={styles.avatarImage} />
             ) : (
                 <Ionicons name="person" size={40} color={theme.textLight} />
             )}
@@ -273,9 +319,23 @@ export default function ProfilePage() {
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
         {/* --- 4. APPEARANCE (TEMA) --- */}
-        <SectionTitle title="APPEARANCE" icon="color-palette" />
-        <View style={{ marginBottom: 20 }}>
-          {THEME_OPTIONS.map((item) => {
+        <TouchableOpacity 
+          activeOpacity={0.7} 
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 }}
+          onPress={() => setIsThemesVisible(!isThemesVisible)}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="color-palette" size={18} color={theme.primary} style={{ marginRight: 8 }} />
+            <ThemedText style={[styles.sectionTitleText, { color: theme.textLight }]}>
+              APPEARANCE
+            </ThemedText>
+          </View>
+          <Ionicons name={isThemesVisible ? "chevron-up" : "chevron-down"} size={20} color={theme.textLight} />
+        </TouchableOpacity>
+
+        {isThemesVisible && (
+          <View style={{ marginBottom: 20 }}>
+            {THEME_OPTIONS.map((item) => {
             const itemTheme = Colors[item.id];
             const isSelected = themeName === item.id;
 
@@ -306,14 +366,7 @@ export default function ProfilePage() {
             )
           })}
         </View>
-
-        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
-        {/* --- 5. DATA MANAGEMENT & ACCESS --- */}
-        <SectionTitle title="DATA MANAGEMENT & ACCESS" icon="save" />
-        <View style={{ marginBottom: 30 }}>
-          <SettingItem icon="document-text" label="Export All Data (ZIP/PDF)" rightIcon="chevron-forward" disabled={true} />
-        </View>
+        )}
 
         {/* --- 6. ALT AKSİYONLAR (LOGOUT & DELETE) --- */}
         <View style={styles.footerActions}>
@@ -328,9 +381,12 @@ export default function ProfilePage() {
             <ThemedText style={{ color: "#EF4444", fontWeight: 'bold', marginLeft: 8 }}>Log Out</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionBtn, { opacity: 0.4 }]} disabled={true}>
-            <Ionicons name="trash" size={20} color={theme.textLight} />
-            <ThemedText style={{ color: theme.textLight, fontWeight: 'bold', marginLeft: 8 }}>Delete Account</ThemedText>
+          <TouchableOpacity 
+            style={styles.actionBtn} 
+            onPress={confirmDeleteAccount}
+          >
+            <Ionicons name="trash" size={20} color="#EF4444" />
+            <ThemedText style={{ color: "#EF4444", fontWeight: 'bold', marginLeft: 8 }}>Delete Account</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -348,13 +404,18 @@ export default function ProfilePage() {
                   <Ionicons name="close" size={32} color="#FFF" />
               </TouchableOpacity>
 
-              {profileImage && (
-                  <Image source={{ uri: profileImage }} style={styles.fullScreenImage} resizeMode="contain" />
-              )}
+              <Image 
+                source={{ uri: activeUser?.avatar || profileImage }} 
+                style={styles.fullScreenImage} 
+                resizeMode="contain" 
+              />
 
               <TouchableOpacity 
                 style={[styles.changePhotoBtn, { backgroundColor: theme.primary }]} 
-                onPress={showImageOptions}
+                onPress={() => {
+                  setIsPhotoModalVisible(false);
+                  setTimeout(() => showImageOptions(), 300);
+                }}
               >
                   <Ionicons name="camera-reverse" size={20} color="#FFF" />
                   <ThemedText style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 8 }}>
@@ -363,6 +424,21 @@ export default function ProfilePage() {
               </TouchableOpacity>
           </View>
       </Modal>
+
+    {/* ==========================================
+        SİLME/YÜKLEME BEKLEME EKRANI
+    ========================================== */}
+    <Modal visible={isDeletingAccount} transparent={true} animationType="fade">
+      <View style={[styles.modalBackground, { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <ThemedText style={{ color: '#FFF', marginTop: 15, fontSize: 16, fontWeight: 'bold' }}>
+          Deleting account and all associated data...
+        </ThemedText>
+        <ThemedText style={{ color: theme.textLight, marginTop: 5, fontSize: 13, textAlign: 'center', paddingHorizontal: 40 }}>
+          This may take a few moments as we remove your files from the cloud.
+        </ThemedText>
+      </View>
+    </Modal>
 
     </ThemedView>
   );

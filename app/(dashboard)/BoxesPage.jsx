@@ -47,6 +47,9 @@ const BoxesPage = () => {
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]);
 
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [tempSelectedStatuses, setTempSelectedStatuses] = useState([]);
+
   // DİNAMİK TİP LİSTESİ ÇIKARMA
   // boxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
   const availableTypes = useMemo(() => {
@@ -57,11 +60,17 @@ const BoxesPage = () => {
   // ÇOKLU SEÇİM İÇİN YARDIMCI FONKSİYON (Kum havuzu için)
   const toggleTempType = (type) => {
     if (tempSelectedTypes.includes(type)) {
-      // Eğer zaten seçiliyse, listeden çıkar
       setTempSelectedTypes(tempSelectedTypes.filter(t => t !== type));
     } else {
-      // Seçili değilse, listeye ekle
       setTempSelectedTypes([...tempSelectedTypes, type]);
+    }
+  };
+
+  const toggleTempStatus = (statusValue) => {
+    if (tempSelectedStatuses.includes(statusValue)) {
+      setTempSelectedStatuses(tempSelectedStatuses.filter(s => s !== statusValue));
+    } else {
+      setTempSelectedStatuses([...tempSelectedStatuses, statusValue]);
     }
   };
 
@@ -82,7 +91,11 @@ const BoxesPage = () => {
           ? selectedTypes.includes(data.type)
           : true;
 
-        return categoryMatch && favoriteMatch && typeMatch;
+        const statusMatch = selectedStatuses.length > 0 && !shownCategory
+          ? (data.status ? selectedStatuses.includes('completed') : selectedStatuses.includes('pending'))
+          : true;
+
+        return categoryMatch && favoriteMatch && typeMatch && statusMatch;
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -93,7 +106,7 @@ const BoxesPage = () => {
           default: return 0;
         }
       });
-  }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes, boxes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
+  }, [shownCategory, sortBy, showFavoritesOnly, selectedTypes, selectedStatuses, boxes]); // KRİTİK NOKTA: Sadece bu ikisi değişirse listeyi baştan hesapla
 
   // 3. ARAMA HOOK'U (query değişkeni BURADA doğuyor)
   const { query, setQuery, results, loading } = useSearch(filteredData);
@@ -120,9 +133,13 @@ const BoxesPage = () => {
       ? tempSelectedTypes.includes(item.type)
       : true;
 
+    const statusMatch = tempSelectedStatuses.length > 0 && !shownCategory
+      ? (item.status ? tempSelectedStatuses.includes('completed') : tempSelectedStatuses.includes('pending'))
+      : true;
+
     // (İleride buraya Seçilen Kategoriler ve Favoriler gibi filtreleri de ekleyeceğiz)
 
-    return categoryMatch && searchMatch && favoriteMatch && typeMatch;
+    return categoryMatch && searchMatch && favoriteMatch && typeMatch && statusMatch;
   }).length;
 
 
@@ -148,6 +165,7 @@ const BoxesPage = () => {
               setIsFilterVisible(true);
               setTempShowFavoritesOnly(showFavoritesOnly);
               setTempSelectedTypes(selectedTypes);
+              setTempSelectedStatuses(selectedStatuses);
             }}
           >
             <Ionicons name="filter-circle" size={28} color={theme.textLight} />
@@ -195,9 +213,9 @@ const BoxesPage = () => {
               <Pressable onPress={() => router.push(`box/${item.id}`)}>
                 <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
   
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <ThemedText title={true} >{item.title}</ThemedText>
-                    <ThemedText >{item.type}</ThemedText>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <ThemedText title={true} style={{ flex: 1, flexWrap: "wrap" }}>{item.title}</ThemedText>
+                    <ThemedText style={{ flexShrink: 1, flexWrap: "wrap", textAlign: "right" }}>{item.type}</ThemedText>
                   </View>
   
                   <ThemedText >{item.description}</ThemedText>
@@ -216,15 +234,26 @@ const BoxesPage = () => {
                   </View>
   
   
-                  <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
-  
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+                    <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                    {item.category === "plan" && (
+                      <ThemedText style={{ 
+                        color: item.status ? theme.primary : 'gray', 
+                        marginLeft: 8, 
+                        fontSize: 12,
+                        fontWeight: item.status ? 'bold' : 'normal'
+                      }}>
+                        {item.status ? "• ✅ Completed" : "• ⏳ Pending"}
+                      </ThemedText>
+                    )}
+                  </View>
   
                 </ThemedCard>
               </Pressable>
             )}
             ListEmptyComponent={
               <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-                No boxes found matching your filters.
+                No boxes found.
               </ThemedText>
             }
           />
@@ -391,6 +420,38 @@ const BoxesPage = () => {
               <ThemedText title={true} style={{ fontSize: 16 }}>Favorites Only</ThemedText>
             </TouchableOpacity>
 
+            {!shownCategory && (
+              <>
+                <Spacer height={25} />
+                <ThemedText title={true}>PLAN STATUS</ThemedText>
+                <Spacer height={10} />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingLeft: 5 }}>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '45%' }}
+                    onPress={() => toggleTempStatus('completed')}
+                  >
+                    <Ionicons
+                      name={tempSelectedStatuses.includes('completed') ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={theme.primary}
+                    />
+                    <ThemedText title={true} style={{ fontSize: 16 }}>Completed</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '45%' }}
+                    onPress={() => toggleTempStatus('pending')}
+                  >
+                    <Ionicons
+                      name={tempSelectedStatuses.includes('pending') ? "checkbox" : "square-outline"}
+                      size={24}
+                      color={theme.primary}
+                    />
+                    <ThemedText title={true} style={{ fontSize: 16 }}>Pending</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
 
 
             {/* Bottom Action Row */}
@@ -400,6 +461,7 @@ const BoxesPage = () => {
                 setSortBy(tempSortBy);
                 setShowFavoritesOnly(tempShowFavoritesOnly);
                 setSelectedTypes(tempSelectedTypes);
+                setSelectedStatuses(tempSelectedStatuses);
               }}
                 style={[styles.filterButton, { backgroundColor: theme.primary }]}>
                 <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>SHOW RESULTS ({previewCount})</ThemedText>
@@ -411,6 +473,7 @@ const BoxesPage = () => {
                   setTempSortBy('new');
                   setTempShowFavoritesOnly(false);
                   setTempSelectedTypes([]);
+                  setTempSelectedStatuses([]);
                 }}
               >
                 <ThemedText style={{ color: theme.text }}>Clear</ThemedText>

@@ -27,6 +27,7 @@ const BoxDetail = () => {
 
 
     const boxes = useBoxStore((state) => state.boxes);
+    const updateBox = useBoxStore((state) => state.updateBox);
     const boxData = boxes.find((data) => data.id === id);
 
     const todos = useTodoStore((state) => state.todos);
@@ -118,21 +119,45 @@ const BoxDetail = () => {
             </ThemedCard>
 
 
-            {/* --- FAVORİLER CHECKBOX BÖLÜMÜ --- */}
+            {/* --- TAMAMLANDI CHECKBOX BÖLÜMÜ --- */}
             {boxData.category == "plan" && (
                 <>
                     <Spacer height={25} />
-                    <View
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 5 }}
+                    <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={async () => {
+                            const newStatus = !boxData.status;
+                            const result = await updateBox(boxData.id, { status: newStatus });
+                            if (!result.success) {
+                                alert("Tamamlanma durumu güncellenirken bir hata oluştu.");
+                            }
+                        }}
                     >
-                        <Ionicons
-                            name={"checkbox"}
-                            size={24}
-                            color={theme.primary}
-                        />
-
-                        <ThemedText style={{ fontSize: 16, textDecorationLine: 'line-through' }}>Completed</ThemedText>
-                    </View>
+                        <ThemedCard style={[styles.noteCard, { paddingVertical: 12, paddingHorizontal: 15, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", borderRadius: 10 }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                <View style={{
+                                    backgroundColor: boxData.status ? theme.primary : 'transparent',
+                                    borderRadius: 12,
+                                    width: 24,
+                                    height: 24,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    borderWidth: 2,
+                                    borderColor: boxData.status ? theme.primary : theme.border
+                                }}>
+                                    {boxData.status && <Ionicons name="checkmark" size={16} color="white" />}
+                                </View>
+                                <ThemedText style={{ 
+                                    fontSize: 15, 
+                                    fontWeight: boxData.status ? 'bold' : 'normal',
+                                    textDecorationLine: boxData.status ? 'line-through' : 'none',
+                                    color: boxData.status ? theme.primary : theme.text 
+                                }}>
+                                    {boxData.status ? "Completed" : "Mark as completed"}
+                                </ThemedText>
+                            </View>
+                        </ThemedCard>
+                    </TouchableOpacity>
                 </>
             )}
 
@@ -249,6 +274,8 @@ const styles = StyleSheet.create({
     typeDateBar: {
         flexDirection: "row",
         justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 10,
     },
     descriptionText: {
         // paddingHorizontal:18,

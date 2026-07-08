@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { getToken, removeToken } from './tokenService';
-import { useUserStore } from '../store/useStore';
 
 // Backend'in URL'si.
 // Android Emülatör kullanıyorsan 10.0.2.2 her zaman en güvenlisidir.
@@ -37,7 +36,8 @@ api.interceptors.response.use(
             console.log('Token geçersiz veya süresi dolmuş, oturum kapatılıyor...');
             await removeToken(); // Şifreli depodan sil
 
-            // Zustand store'u güncelle ve kullanıcıyı çıkış yapmaya zorla
+            // Zustand store'u güncelle ve kullanıcıyı çıkış yapmaya zorla (Require cycle hatasını çözmek için lazy require)
+            const { useUserStore } = require('../store/useStore');
             useUserStore.getState().logoutUser();
         }
         return Promise.reject(error);

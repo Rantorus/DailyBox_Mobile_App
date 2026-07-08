@@ -6,6 +6,9 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Colors } from "../../constants/Colors";
 import { useTheme } from "../../contexts/ThemeContext";
 import UserOnly from "../../auth/UserOnly";
+import { useEffect } from "react";
+import { useChapterStore } from "../../store/chapterStore";
+import { useBoxStore } from "../../store/boxStore";
 
 const ICON_SIZE = 24;
 
@@ -13,6 +16,15 @@ const DashboardLayout = () => {
 
     const { themeName } = useTheme();
     const theme = Colors[themeName]
+
+    const fetchMyChapters = useChapterStore((state) => state.fetchMyChapters);
+    const fetchMyBoxes = useBoxStore((state) => state.fetchMyBoxes);
+
+    // Uygulama açılır açılmaz (dashboard render olduğunda) global verileri çek
+    useEffect(() => {
+        fetchMyChapters();
+        fetchMyBoxes();
+    }, []);
 
     return (
         <UserOnly>

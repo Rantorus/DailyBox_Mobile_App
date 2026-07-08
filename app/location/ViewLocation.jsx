@@ -28,7 +28,7 @@ const LocationCardReadOnly = ({ item, theme, onFocusMap }) => {
             if (supported) {
                 Linking.openURL(url);
             } else {
-                Alert.alert("Hata", "Bu cihazda harita uygulaması açılamıyor.");
+                Alert.alert("Error", "Maps application cannot be opened on this device.");
             }
         });
     };
@@ -171,7 +171,7 @@ export default function ViewLocation() {
                     <View style={isFullScreen ? [styles.fullScreenMap, { backgroundColor: theme.background }] : [styles.mapContainer, { borderBottomColor: theme.border }]}>
                         <MapView
                             ref={mapRef}
-                            provider={PROVIDER_GOOGLE}
+                            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                             style={styles.map}
                             initialRegion={initialRegion}
                             onMapReady={fitAllMarkers}

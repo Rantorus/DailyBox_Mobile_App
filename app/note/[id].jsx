@@ -32,6 +32,10 @@ const NoteDetails = () => {
         );
     }
 
+    const content = boxData.note_content || boxData.note?.content || "";
+    const charCount = content.length;
+    const wordCount = content.trim() === "" ? 0 : content.trim().split(/\s+/).length;
+
     return (
         <ThemedView style={{ flex: 1, paddingHorizontal: 10, paddingBottom:20 }} safe={true}>
 
@@ -95,8 +99,15 @@ const NoteDetails = () => {
                             textAlign: "left" 
                         }}
                     >
-                        {boxData.note_content || boxData.note?.content}
+                        {content}
                     </ThemedText>
+
+                    {/* Word and Character Count Panel */}
+                    <View style={{ marginTop: 30, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 15, alignItems: 'center' }}>
+                        <ThemedText style={{ fontSize: 12, color: theme.textLight }}>
+                            {wordCount} words | {charCount} chars
+                        </ThemedText>
+                    </View>
 
                 </ThemedCard>
             </ScrollView>

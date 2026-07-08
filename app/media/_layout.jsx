@@ -1,5 +1,5 @@
 // app/media/_layout.jsx
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -15,6 +15,7 @@ const MediaLayout = () => {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
     const router = useRouter();
+    const pathname = usePathname();
     const currentBoxId = useMediaStore(state => state.currentBoxId);
 
     const handleCreate = () => {
@@ -96,7 +97,11 @@ const MediaLayout = () => {
                         <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                                router.push(`/media/edit/EditPhoto?boxId=${currentBoxId}`);
+                                let editRoute = 'EditPhoto';
+                                if (pathname.includes('ViewAudio')) editRoute = 'EditAudio';
+                                else if (pathname.includes('ViewDocs')) editRoute = 'EditDocs';
+                                
+                                router.push(`/media/edit/${editRoute}?boxId=${currentBoxId}`);
                             }}
                             style={{
                                 marginRight: 10,

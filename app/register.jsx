@@ -41,7 +41,7 @@ const Register = () => {
     async function handleRegister() {
         // Boş alan kontrolü
         if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-            setError('Lütfen tüm alanları doldurun.');
+            setError('Please fill in all fields.');
             return;
         }
 

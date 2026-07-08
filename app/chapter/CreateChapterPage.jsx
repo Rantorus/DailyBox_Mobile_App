@@ -81,10 +81,10 @@ useEffect(() => {
 
                 router.back();
             } else {
-                Alert.alert("Hata", result.error || "Chapter oluşturulamadı.");
+                Alert.alert("Error", result.error || "Failed to create the chapter.");
             }
         } else {
-            Alert.alert("Eksik Bilgi", "Lütfen tüm alanları doldurun.");
+            Alert.alert("Missing Information", "Please fill in all fields.");
         }
     }
 
@@ -268,7 +268,19 @@ useEffect(() => {
                                 <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
                                     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                                         <ThemedText title={true}>{item.title}</ThemedText>
-                                        <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                            <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                                            {item.category === "plan" && (
+                                                <ThemedText style={{ 
+                                                    color: item.status ? theme.primary : 'gray', 
+                                                    marginLeft: 8, 
+                                                    fontSize: 12,
+                                                    fontWeight: item.status ? 'bold' : 'normal'
+                                                }}>
+                                                    {item.status ? "• ✅ Completed" : "• ⏳ Pending"}
+                                                </ThemedText>
+                                            )}
+                                        </View>
                                     </View>
 
                                     <ThemedText >{item.description}</ThemedText>

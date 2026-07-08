@@ -57,6 +57,7 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
 
         return () => {
             if (currentSound) {
+                currentSound.setOnPlaybackStatusUpdate(null);
                 currentSound.unloadAsync();
             }
         };

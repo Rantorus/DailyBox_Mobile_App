@@ -75,10 +75,10 @@ const EditNotePage = () => {
             if (result.success) {
                 router.back();
             } else {
-                Alert.alert("Hata", result.error || "Not kaydedilemedi.");
+                Alert.alert("Error", result.error || "Failed to save the note.");
             }
         } else {
-            Alert.alert("Eksik Bilgi", "Başlık veya içerik boş olamaz.");
+            Alert.alert("Missing Information", "Title and content cannot be empty.");
         }
     }
 

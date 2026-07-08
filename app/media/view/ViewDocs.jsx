@@ -44,7 +44,7 @@ const DocCardReadOnly = ({ item, theme }) => {
                 const isAvailable = await Sharing.isAvailableAsync();
                 if (isAvailable) {
                     await Sharing.shareAsync(fileUri, {
-                        dialogTitle: 'Belgeyi Aç',
+                        dialogTitle: 'Open Document',
                     });
                 } else {
                     Alert.alert("Error", "File sharing or opening is not supported on this device.");
@@ -53,7 +53,7 @@ const DocCardReadOnly = ({ item, theme }) => {
                 const isAvailable = await Sharing.isAvailableAsync();
                 if (isAvailable) {
                     await Sharing.shareAsync(item.uri, {
-                        dialogTitle: 'Belgeyi Aç',
+                        dialogTitle: 'Open Document',
                     });
                 } else {
                     Alert.alert("Error", "File sharing or opening is not supported on this device.");

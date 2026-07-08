@@ -141,10 +141,10 @@ const EditChapterPage = () => {
 
                 router.back();
             } else {
-                Alert.alert("Hata", result.error || "Chapter güncellenemedi.");
+                Alert.alert("Error", result.error || "Failed to update the chapter.");
             }
         } else {
-            Alert.alert("Eksik Bilgi", "Lütfen tüm alanları doldurun.");
+            Alert.alert("Missing Information", "Please fill in all fields.");
         }
     }
 
@@ -165,7 +165,7 @@ const EditChapterPage = () => {
                         if (result.success) {
                             router.replace("/(dashboard)/ChaptersPage");
                         } else {
-                            Alert.alert("Hata", result.error || "Chapter silinemedi.");
+                            Alert.alert("Error", result.error || "Failed to delete the chapter.");
                         }
                     }
                 }
@@ -182,7 +182,7 @@ const EditChapterPage = () => {
         // Remove from backend
         const result = await removeBoxFromChapterStore(chapterDataId, boxIdToRemove);
         if (!result.success) {
-             Alert.alert("Hata", result.error || "Kutu chapterdan çıkarılamadı.");
+             Alert.alert("Error", result.error || "Failed to remove the box from the chapter.");
              // Revert UI if needed (optional)
         }
     };
@@ -390,7 +390,19 @@ const EditChapterPage = () => {
                                 <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
                                     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                                         <ThemedText title={true}>{item.title}</ThemedText>
-                                        <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                                            <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                                            {item.category === "plan" && (
+                                                <ThemedText style={{ 
+                                                    color: item.status ? theme.primary : 'gray', 
+                                                    marginLeft: 8, 
+                                                    fontSize: 12,
+                                                    fontWeight: item.status ? 'bold' : 'normal'
+                                                }}>
+                                                    {item.status ? "• ✅ Completed" : "• ⏳ Pending"}
+                                                </ThemedText>
+                                            )}
+                                        </View>
                                     </View>
 
                                     <ThemedText>{item.description}</ThemedText>

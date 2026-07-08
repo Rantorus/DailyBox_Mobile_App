@@ -169,9 +169,9 @@ const ChaptersPage = () => {
             <Pressable onPress={() => router.push(`chapter/${item.id}`)}>
               <ThemedCard style={[styles.card, { borderLeftColor: theme.primary }]}>
 
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <ThemedText style={{ fontSize: 15 }} title={true} >{item.title}</ThemedText>
-                  <ThemedText style={{ fontSize: 15 }} >{item.type}</ThemedText>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <ThemedText style={{ fontSize: 15, flex: 1, flexWrap: "wrap" }} title={true} >{item.title}</ThemedText>
+                  <ThemedText style={{ fontSize: 15, flexShrink: 1, flexWrap: "wrap", textAlign: "right" }} >{item.type}</ThemedText>
                 </View>
 
                 <ThemedText style={{ fontSize: 15 }} >{item.description}</ThemedText>
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   list: { paddingBottom: 20 },
   card: {
     width: "92%",
-    height: 185,
+    minHeight: 185,
     justifyContent: "space-between",
     marginHorizontal: 15,
     marginVertical: 8,

@@ -63,7 +63,7 @@ const index = () => {
 
     async function handleLogin() {
         if (!email.trim() || !password.trim()) {
-            setError('Lütfen tüm alanları doldurun.');
+            setError('Please fill in all fields.');
             return;
         }
 
@@ -83,14 +83,14 @@ const index = () => {
     const handleBiometricLogin = async () => {
         const creds = await getCredentials();
         if (!creds) {
-            setError("Kayıtlı kimlik bilgisi bulunamadı. Lütfen önce şifrenizle giriş yapın.");
+            setError("No saved credentials found. Please log in with your password first.");
             return;
         }
 
         const result = await LocalAuthentication.authenticateAsync({
-            promptMessage: 'Parmak izi veya Face ID ile giriş yap',
-            cancelLabel: 'Şifre ile gir',
-            fallbackLabel: 'Şifre kullan',
+            promptMessage: 'Log in with Biometrics',
+            cancelLabel: 'Log in with password',
+            fallbackLabel: 'Use password',
         });
 
         if (result.success) {
@@ -168,7 +168,7 @@ const index = () => {
                         >
                             <Ionicons name="finger-print" size={24} color={theme.primary} />
                             <ThemedText style={{ color: theme.primary, fontWeight: 'bold' }}>
-                                Parmak izi ile giriş yap
+                                Log in with Biometrics
                             </ThemedText>
                         </TouchableOpacity>
                     )}

@@ -116,7 +116,7 @@ const CreateBoxPage = () => {
                 }
             } catch (e) {
                 setIsSaving(false);
-                Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD veya GG.AA.YYYY)");
+                Alert.alert("Invalid Date", "Please enter a valid date format (e.g., YYYY-MM-DD).");
                 return;
             }
 
@@ -129,11 +129,11 @@ const CreateBoxPage = () => {
 
             if (currentCategory === "log" && selectedDate > today) {
                 setIsSaving(false);
-                Alert.alert("Geçersiz Tarih", "Log kayıtları ileri bir tarihe atılamaz.");
+                Alert.alert("Invalid Date", "Logs cannot be created for future dates.");
                 return;
             } else if (currentCategory === "plan" && selectedDate < today) {
                 setIsSaving(false);
-                Alert.alert("Geçersiz Tarih", "Plan kayıtları geçmiş bir tarihe atılamaz.");
+                Alert.alert("Invalid Date", "Plans cannot be created for past dates.");
                 return;
             }
 
@@ -182,7 +182,7 @@ const CreateBoxPage = () => {
                         
                         const resPhoto = await uploadBoxPhoto(result.data.id, photo.uri, type, safeName, displayName);
                         if (!resPhoto.success) {
-                            Alert.alert("Fotoğraf Yüklenemedi", resPhoto.error);
+                            Alert.alert("Photo Upload Failed", resPhoto.error);
                         }
                     }
                 }
@@ -205,7 +205,7 @@ const CreateBoxPage = () => {
                         
                         const resAudio = await uploadBoxAudio(result.data.id, audio.uri, mimeType, safeName, displayName);
                         if (!resAudio.success) {
-                            Alert.alert("Ses Yüklenemedi", resAudio.error);
+                            Alert.alert("Audio Upload Failed", resAudio.error);
                         }
                     }
                 }
@@ -223,7 +223,7 @@ const CreateBoxPage = () => {
                         
                         const resDoc = await uploadBoxDoc(result.data.id, doc.uri, mimeType, safeName, displayName);
                         if (!resDoc.success) {
-                            Alert.alert("Döküman Yüklenemedi", resDoc.error);
+                            Alert.alert("Document Upload Failed", resDoc.error);
                         }
                     }
                 }
@@ -235,12 +235,12 @@ const CreateBoxPage = () => {
                 // Böylece detay sayfasında 'geri' yapıldığında BoxesPage'e (yani bu sayfanın bir öncesine) dönülür.
                 router.replace({ pathname: '/box/[id]', params: { id: result.data.id } });
             } else {
-                Alert.alert("Hata", result.error || "Kutu oluşturulamadı.");
+                Alert.alert("Error", result.error || "Failed to create the box.");
             }
             setIsSaving(false);
         }
         else {
-            Alert.alert("Eksik Bilgi", "Lütfen tüm zorunlu alanları doldurun.");
+            Alert.alert("Missing Information", "Please fill in all required fields.");
         }
     }
 
@@ -634,14 +634,16 @@ const CreateBoxPage = () => {
                                 </>
                             )}
 
-                            {(hasNote || hasTodos || hasLocation || hasMedia) && (
+                            {(hasNote || hasTodos || hasLocation || hasMedia) && !(hasNote && hasTodos && hasLocation && hasMedia) && (
                                 <>
                                     <Spacer height={15} />
                                     <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
                                 </>
                             )}
 
-                            <ThemedText title={true}>Available Features</ThemedText>
+                            {!(hasNote && hasTodos && hasLocation && hasMedia) && (
+                                <ThemedText title={true}>Available Features</ThemedText>
+                            )}
 
                             {/* --- NOTES --- */}
                             {!hasNote && (

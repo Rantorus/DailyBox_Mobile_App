@@ -50,7 +50,10 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         initSound();
 
         return () => {
-            if (currentSound) currentSound.unloadAsync();
+            if (currentSound) {
+                currentSound.setOnPlaybackStatusUpdate(null);
+                currentSound.unloadAsync();
+            }
         };
     }, [item.uri]);
 

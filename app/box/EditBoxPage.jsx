@@ -104,7 +104,7 @@ const EditBoxPage = () => {
 
         const result = await updateBox(boxDataId, updatePayload);
         if (!result.success) {
-            Alert.alert("Hata", result.error || "Özellik silinemedi.");
+            Alert.alert("Error", result.error || "Failed to delete feature.");
         }
     };
 
@@ -137,7 +137,7 @@ const EditBoxPage = () => {
                      parsedDate = `${parts[0]}-${parts[1]}-${parts[2]}T12:00:00.000Z`;
                 }
             } catch (e) {
-                 Alert.alert("Geçersiz Tarih", "Lütfen geçerli bir tarih formatı giriniz (örn: YYYY-MM-DD veya GG.AA.YYYY)");
+                 Alert.alert("Invalid Date", "Please enter a valid date format (e.g., YYYY-MM-DD).");
                  return;
             }
 
@@ -148,10 +148,10 @@ const EditBoxPage = () => {
             const currentCategory = boxData.category || "log";
 
             if (currentCategory === "log" && selectedDateString > todayString) {
-                Alert.alert("Geçersiz Tarih", "Gelecekten bir tarih girilemez. Lütfen plan kutusu (Plan) oluşturun veya bugün/geçmiş bir tarih girin.");
+                Alert.alert("Invalid Date", "Cannot enter a future date for a Log. Please create a Plan box or enter a past/today date.");
                 return;
             } else if (currentCategory === "plan" && selectedDateString < todayString) {
-                Alert.alert("Geçersiz Tarih", "Geçmişten bir tarih girilemez. Lütfen log kutusu (Log) oluşturun veya bugün/gelecek bir tarih girin.");
+                Alert.alert("Invalid Date", "Cannot enter a past date for a Plan. Please create a Log box or enter a future/today date.");
                 return;
             }
 
@@ -169,11 +169,11 @@ const EditBoxPage = () => {
                 // sadece router.back() yapmamız bizi güncellenmiş Details sayfasına döndürür.
                 router.back();
             } else {
-                Alert.alert("Hata", result.error || "Kutu güncellenemedi.");
+                Alert.alert("Error", result.error || "Failed to update the box.");
             }
         }
         else {
-            Alert.alert("Eksik Bilgi", "Lütfen tüm zorunlu alanları doldurun.");
+            Alert.alert("Missing Information", "Please fill in all required fields.");
         }
     }
 
@@ -193,7 +193,7 @@ const EditBoxPage = () => {
                         if (result.success) {
                             router.replace("/(dashboard)/BoxesPage");
                         } else {
-                            Alert.alert("Hata", result.error || "Box silinemedi.");
+                            Alert.alert("Error", result.error || "Failed to delete the box.");
                         }
                     }
                 }
@@ -603,14 +603,16 @@ const EditBoxPage = () => {
                                 </>
                             )}
 
-                            {(hasNote || hasTodos || hasLocation || hasMedia) && (
+                            {(hasNote || hasTodos || hasLocation || hasMedia) && !(hasNote && hasTodos && hasLocation && hasMedia) && (
                                 <>
                                     <Spacer height={15} />
                                     <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50' }]} />
                                 </>
                             )}
 
-                            <ThemedText title={true}>Available Features</ThemedText>
+                            {!(hasNote && hasTodos && hasLocation && hasMedia) && (
+                                <ThemedText title={true}>Available Features</ThemedText>
+                            )}
 
                             {/* --- NOTES --- */}
                             {!hasNote && (

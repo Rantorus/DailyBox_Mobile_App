@@ -26,15 +26,6 @@ const ChapterDetail = () => {
     const chapters = useChapterStore((state) => state.chapters);
     const chapterData = chapters.find((data) => data.id === id);
 
-    // Eğer veri bulunamazsa çökmeyi önleyen güvenlik kontrolü
-    if (!chapterData) {
-        return (
-            <ThemedView safe={true} style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color={theme.primary} />
-            </ThemedView>
-        );
-    }
-
     const [includedBoxes, setIncludedBoxes] = React.useState([]);
     const [loadingBoxes, setLoadingBoxes] = React.useState(true);
 
@@ -57,6 +48,15 @@ const ChapterDetail = () => {
             }
         }, [id])
     );
+
+    // Eğer veri bulunamazsa çökmeyi önleyen güvenlik kontrolü
+    if (!chapterData) {
+        return (
+            <ThemedView safe={true} style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView safe={true} style={styles.container}>
@@ -156,14 +156,25 @@ const ChapterDetail = () => {
                                         <Ionicons name="star-outline" size={24} color={theme.border} />
                                     )}
                                 </View>
-                                
-                                <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
+                                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+                                    <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                                    {item.category === "plan" && (
+                                        <ThemedText style={{ 
+                                            color: item.status ? theme.primary : 'gray', 
+                                            marginLeft: 8, 
+                                            fontSize: 12,
+                                            fontWeight: item.status ? 'bold' : 'normal'
+                                        }}>
+                                            {item.status ? "• ✅ Completed" : "• ⏳ Pending"}
+                                        </ThemedText>
+                                    )}
+                                </View>
                             </ThemedCard>
                         </Pressable>
                     )}
                     ListEmptyComponent={
                         <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-                            No boxes found in this chapter.
+                            No boxes found.
                         </ThemedText>
                     }
                 />

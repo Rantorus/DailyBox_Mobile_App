@@ -31,7 +31,7 @@ const LocationCardEdit = ({ item, theme, onRemove }) => {
             if (supported) {
                 Linking.openURL(url);
             } else {
-                Alert.alert("Hata", "Bu cihazda harita uygulaması açılamıyor.");
+                Alert.alert("Error", "Maps application cannot be opened on this device.");
             }
         });
     };
@@ -116,12 +116,11 @@ export default function EditLocation() {
     // HARİTA VE ARAMA İŞLEMLERİ
     // ==========================================
     const openMapPicker = async () => {
-        setIsMapVisible(true);
         setIsLoading(true);
         try {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('İzin Gerekli', 'Haritada konumunuzu görebilmek için GPS izni vermelisiniz.');
+                Alert.alert('Permission Required', 'GPS permission is required to view your location on the map.');
                 setIsLoading(false);
                 return;
             }
@@ -144,9 +143,12 @@ export default function EditLocation() {
                 longitude: currentLocation.coords.longitude
             });
 
+            // Haritayı, izinler ve konum alındıktan SONRA render et (Android GL çökmesini önler)
+            setIsMapVisible(true);
+
             setTimeout(() => {
                 mapRef.current?.animateToRegion(initialRegion, 800);
-            }, 100);
+            }, 500);
 
         } catch (error) {
             console.error(error);
@@ -167,8 +169,8 @@ export default function EditLocation() {
             const data = await response.json();
             setSearchResults(data);
         } catch (error) {
-            console.error("Arama Hatası:", error);
-            Alert.alert("Hata", "Konum aranırken bir sorun oluştu.");
+            console.error("Geocoding hatası:", error);
+            Alert.alert("Error", "An error occurred while searching for the location.");
         } finally {
             setIsLoading(false);
         }
@@ -193,7 +195,7 @@ export default function EditLocation() {
 
     const handleConfirmLocation = async () => {
         if (!markerCoords) {
-            Alert.alert("Uyarı", "Lütfen haritadan bir nokta seçin.");
+            Alert.alert("Warning", "Please select a point on the map.");
             return;
         }
 
@@ -231,7 +233,7 @@ export default function EditLocation() {
 
     const finalizeLocationSave = () => {
         if (!locationTitle.trim()) {
-            Alert.alert("Uyarı", "Lütfen konuma bir başlık verin.");
+            Alert.alert("Warning", "Please provide a title for the location.");
             return;
         }
 
@@ -270,7 +272,7 @@ export default function EditLocation() {
                                     setIsLoading(false);
                                     
                                     if (!result.success) {
-                                        Alert.alert("Hata", result.error || "Konumlar güncellenemedi.");
+                                        Alert.alert("Error", result.error || "Failed to update locations.");
                                         return;
                                     }
                                 }
@@ -332,7 +334,7 @@ export default function EditLocation() {
                     <View style={{ flex: 1 }}>
                         <MapView
                             ref={mapRef}
-                            provider={PROVIDER_GOOGLE}
+                            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                             style={{ width: width, height: height }}
                             initialRegion={mapRegion}
                             onPress={handleMapPress}

@@ -226,13 +226,25 @@ const CalendarPage = () => {
                 )}
               </View>
 
-              <ThemedText style={{ color: 'gray', marginTop: 5 }}>{item.category.toUpperCase()}</ThemedText>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+                <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
+                {item.category === "plan" && (
+                  <ThemedText style={{ 
+                    color: item.status ? theme.primary : 'gray', 
+                    marginLeft: 8, 
+                    fontSize: 12,
+                    fontWeight: item.status ? 'bold' : 'normal'
+                  }}>
+                    {item.status ? "• ✅ Completed" : "• ⏳ Pending"}
+                  </ThemedText>
+                )}
+              </View>
             </ThemedCard>
           </Pressable>
         )}
         ListEmptyComponent={
           <ThemedText style={{ textAlign: 'center', marginTop: 30, color: 'gray' }}>
-            No boxes found for this date.
+            No boxes found.
           </ThemedText>
         }
       />
