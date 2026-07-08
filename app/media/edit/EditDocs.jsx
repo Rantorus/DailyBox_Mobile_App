@@ -26,11 +26,11 @@ const DocCardEdit = ({ item, theme, onRemove }) => {
                     dialogTitle: 'Belgeyi Aç',
                 });
             } else {
-                Alert.alert("Hata", "Bu cihazda dosya paylaşımı veya açma desteklenmiyor.");
+                Alert.alert("Error", "File sharing or opening is not supported on this device.");
             }
         } catch (error) {
-            console.error("Dosya açılamadı:", error);
-            Alert.alert("Hata", "Dosya açılırken bir sorun oluştu.");
+            console.error("Could not open file:", error);
+            Alert.alert("Error", "An error occurred while opening the file.");
         }
     };
 
@@ -164,7 +164,7 @@ export default function EditDocs() {
 
             } catch (error) {
                 Alert.alert("Error", "Could not add document.");
-                console.error("Dosya Kopyalama Hatası:", error);
+                console.error("File Copy Error:", error);
             }
         }
     };

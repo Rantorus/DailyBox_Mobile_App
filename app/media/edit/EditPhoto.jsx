@@ -34,10 +34,11 @@ export default function EditPhoto() {
 
     const [isUploading, setIsUploading] = useState(false);
 
-    // Box verisinden fotoğrafları çekiyoruz (media_photos sadece URL array'idir)
-    const images = boxData?.media_photos?.map((url, index) => ({
+    // Box verisinden fotoğrafları çekiyoruz (Artık db'den obje olarak geliyor: { url, name })
+    const images = boxData?.media_photos?.map((media, index) => ({
         id: index.toString(),
-        uri: url
+        uri: media.url,
+        name: media.name
     })) || [];
 
     // ==========================================
@@ -46,33 +47,37 @@ export default function EditPhoto() {
 
     const saveImageToLocal = async (cacheUri) => {
         if (!boxId) {
-            Alert.alert("Hata", "Box ID bulunamadı.");
+            Alert.alert("Error", "Box ID not found.");
             return;
         }
 
         try {
             setIsUploading(true);
-            const fileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
-            const match = /\.(\w+)$/.exec(fileName);
+            const originalFileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+            const match = /\.(\w+)$/.exec(originalFileName);
+            const ext = match ? match[1] : 'jpg';
             const type = match ? `image/${match[1]}` : `image`;
 
-            const result = await uploadBoxPhoto(boxId, cacheUri, type, fileName);
+            const safeName = `photo_${Date.now()}.${ext}`;
+            const displayName = originalFileName;
+
+            const result = await uploadBoxPhoto(boxId, cacheUri, type, safeName, displayName);
             setIsUploading(false);
 
             if (!result.success) {
-                Alert.alert("Hata", result.error || "Fotoğraf kaydedilemedi.");
+                Alert.alert("Error", result.error || "Could not save photo.");
             }
         } catch (error) {
             setIsUploading(false);
-            Alert.alert("Hata", "Fotoğraf kaydedilirken bir hata oluştu.");
-            console.error("Kayıt Hatası:", error);
+            Alert.alert("Error", "An error occurred while saving the photo.");
+            console.error("Save Error:", error);
         }
     };
 
     const pickFromGallery = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('İzin Gerekli', 'Galeriye erişim izni vermelisiniz.');
+            Alert.alert('Permission Required', 'Gallery access is needed.');
             return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -90,7 +95,7 @@ export default function EditPhoto() {
     const takeWithCamera = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('İzin Gerekli', 'Kameraya erişim izni vermelisiniz.');
+            Alert.alert('Permission Required', 'Camera access is needed.');
             return;
         }
         const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
@@ -105,12 +110,12 @@ export default function EditPhoto() {
 
     const handleRemove = (id, uri) => {
         Alert.alert(
-            "Fotoğrafı Sil",
-            "Bu fotoğrafı silmek istediğinden emin misin?",
+            "Delete Photo",
+            "Are you sure you want to delete this photo?",
             [
-                { text: "İptal", style: "cancel" },
+                { text: "Cancel", style: "cancel" },
                 {
-                    text: "Sil",
+                    text: "Delete",
                     style: "destructive",
                     onPress: async () => {
                         setIsUploading(true);
@@ -118,7 +123,7 @@ export default function EditPhoto() {
                         setIsUploading(false);
 
                         if (!result.success) {
-                            Alert.alert("Hata", result.error || "Fotoğraf silinemedi.");
+                            Alert.alert("Error", result.error || "Could not delete photo.");
                         }
                     }
                 }
@@ -137,7 +142,7 @@ export default function EditPhoto() {
                 {isUploading && (
                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15 }}>
                         <ActivityIndicator size="large" color={theme.primary} />
-                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>İşleniyor...</ThemedText>
+                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>Processing...</ThemedText>
                     </View>
                 )}
 

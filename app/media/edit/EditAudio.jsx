@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
     StyleSheet, View, TouchableOpacity, FlatList, 
-    Alert, Modal, TextInput, TouchableWithoutFeedback, Keyboard 
+    Alert, Modal, TextInput, TouchableWithoutFeedback, Keyboard,
+    ActivityIndicator
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
@@ -15,6 +16,8 @@ import ThemedText from '../../../components/ThemedText';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useBoxStore } from '../../../store/boxStore';
+import { useLocalSearchParams } from 'expo-router';
 
 // ==========================================
 // ALT BİLEŞEN: SES OYNATICI (PLAYER)
@@ -30,14 +33,18 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         let currentSound = null;
         
         const initSound = async () => {
-            const { sound: newSound, status } = await Audio.Sound.createAsync(
-                { uri: item.uri },
-                { shouldPlay: false },
-                onPlaybackStatusUpdate
-            );
-            currentSound = newSound;
-            setSound(newSound);
-            if (status.durationMillis) setDuration(status.durationMillis);
+            try {
+                const { sound: newSound, status } = await Audio.Sound.createAsync(
+                    { uri: item.uri },
+                    { shouldPlay: false },
+                    onPlaybackStatusUpdate
+                );
+                currentSound = newSound;
+                setSound(newSound);
+                if (status.durationMillis) setDuration(status.durationMillis);
+            } catch (err) {
+                console.error("Ses yükleme hatası:", err);
+            }
         };
         
         initSound();
@@ -76,6 +83,12 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
             setPlayingId(null);
         } else {
             setPlayingId(item.id);
+            
+            // Eğer ses bittikten sonra tekrar play'e basıldıysa (position 0'a çekilmişti), başa sar
+            if (position === 0) {
+                await sound.setPositionAsync(0);
+            }
+            
             await sound.playAsync();
             setIsPlaying(true);
         }
@@ -136,11 +149,36 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
 export default function EditAudio() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
+    const params = useLocalSearchParams();
+    
+    // BACKEND & STORE
+    const storeBoxId = useMediaStore(state => state.currentBoxId);
+    const boxId = params.boxId || storeBoxId;
+    
+    const boxes = useBoxStore(state => state.boxes);
+    const boxData = boxes.find((data) => String(data.id) === String(boxId));
+    
+    const uploadBoxAudio = useBoxStore(state => state.uploadBoxAudio);
+    const deleteBoxAudio = useBoxStore(state => state.deleteBoxAudio);
 
-    // ZUSTAND STORE
-    const audios = useMediaStore(state => state.audios);
-    const addAudio = useMediaStore(state => state.addAudio);
-    const removeAudio = useMediaStore(state => state.removeAudio);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Box verisinden sesleri çekiyoruz (Artık db'den obje olarak geliyor: { url, name })
+    const audios = boxData?.media_audio?.map((media, index) => {
+        let originalName = media.name || media.url.split('/').pop();
+        
+        try {
+            originalName = decodeURIComponent(originalName);
+        } catch (e) {
+            // Decoding başarısız olursa orijinal haliyle kalsın
+        }
+        
+        return {
+            id: index.toString(),
+            uri: media.url,
+            name: originalName
+        };
+    }) || [];
 
     // OYNATMA STATE'İ
     const [playingAudioId, setPlayingAudioId] = useState(null);
@@ -167,6 +205,42 @@ export default function EditAudio() {
     }, []);
 
     // ==========================================
+    // BACKEND EKLEME (UPLOAD)
+    // ==========================================
+    const saveAudioToBackend = async (cacheUri, name) => {
+        if (!boxId) {
+            Alert.alert("Error", "Box ID not found.");
+            return;
+        }
+
+        try {
+            setIsUploading(true);
+            // Dosya uzantısını uri'den veya default olarak m4a alıyoruz
+            const match = /\.(\w+)$/.exec(cacheUri);
+            const ext = match ? match[1] : 'm4a';
+            const mimeType = ext === 'mp3' ? 'audio/mpeg' : (ext === 'wav' ? 'audio/wav' : 'audio/m4a');
+            
+            // Multipart için güvenli bir isim (boşluksuz, URL dostu) oluşturuyoruz
+            const safeName = `audio_${Date.now()}.${ext}`;
+            
+            // Kullanıcının yazdığı isim veya orijinal dosya ismi
+            const displayName = name ? (name.endsWith(`.${ext}`) ? name : `${name}.${ext}`) : safeName;
+
+            // displayName'i de son parametre olarak gönderiyoruz
+            const result = await uploadBoxAudio(boxId, cacheUri, mimeType, safeName, displayName);
+            setIsUploading(false);
+
+            if (!result.success) {
+                Alert.alert("Error", result.error || "Could not save audio file.");
+            }
+        } catch (error) {
+            setIsUploading(false);
+            Alert.alert("Error", "An error occurred while saving the audio file.");
+            console.error("Save Error:", error);
+        }
+    };
+
+    // ==========================================
     // SİLME İŞLEMİ (ONAYLI)
     // ==========================================
     const handleRemove = (id, uri) => {
@@ -179,13 +253,13 @@ export default function EditAudio() {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        try {
-                            const file = new File(uri);
-                            if (file.exists) file.delete();
-                        } catch (e) {
-                            console.error("Dosya silinemedi:", e);
+                        setIsUploading(true); // Silme işlemi bitene kadar spinner gösterelim
+                        const result = await deleteBoxAudio(boxId, uri);
+                        setIsUploading(false);
+                        
+                        if (!result.success) {
+                            Alert.alert("Error", result.error || "Could not delete audio file.");
                         }
-                        removeAudio(id);
                     }
                 }
             ]
@@ -193,7 +267,7 @@ export default function EditAudio() {
     };
 
     // ==========================================
-    // EKLEME İŞLEMLERİ
+    // SEÇME & KAYDETME İŞLEMLERİ
     // ==========================================
     const pickAudioFile = async () => {
         setPlayingAudioId(null);
@@ -206,23 +280,11 @@ export default function EditAudio() {
         if (!result.canceled) {
             try {
                 const asset = result.assets[0];
-                const sourceFile = new File(asset.uri);
-                
                 const originalName = asset.name || 'audio.m4a';
-                const uniqueFileName = `${Date.now()}_${originalName.replace(/\s+/g, '_')}`;
-                const destinationFile = new File(Paths.document, uniqueFileName);
-
-                await sourceFile.copy(destinationFile);
-
-                addAudio({
-                    id: Date.now().toString(),
-                    uri: destinationFile.uri,
-                    name: originalName, 
-                    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                });
+                await saveAudioToBackend(asset.uri, originalName);
             } catch (error) {
                 Alert.alert("Error", "Could not add audio file.");
-                console.error("Dosya Kopyalama Hatası:", error);
+                console.error("Dosya Yükleme Hatası:", error);
             }
         }
     };
@@ -292,21 +354,10 @@ export default function EditAudio() {
 
     const finalizeRecordingSave = async () => {
         if (!pendingUri) return;
-
-        const sourceFile = new File(pendingUri);
-        const fileName = `recording_${Date.now()}.m4a`;
-        const destinationFile = new File(Paths.document, fileName);
-
-        await sourceFile.copy(destinationFile);
-
-        addAudio({
-            id: Date.now().toString(),
-            uri: destinationFile.uri,
-            name: recordTitle.trim() || "Voice Record",
-            date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        });
-
+        
         setShowTitleModal(false);
+        await saveAudioToBackend(pendingUri, recordTitle.trim() || "Voice Record");
+        
         setPendingUri(null);
         setRecordTitle('');
     };
@@ -326,6 +377,13 @@ export default function EditAudio() {
             <StatusBar style={theme.statusBarStyle} />
 
             <View style={styles.contentContainer}>
+                {isUploading && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15 }}>
+                        <ActivityIndicator size="large" color={theme.primary} />
+                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>Processing...</ThemedText>
+                    </View>
+                )}
+                
                 {audios.length === 0 ? (
                     /* BOŞ EKRAN DURUMU */
                     <View style={styles.emptyState}>

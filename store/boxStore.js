@@ -10,17 +10,17 @@ export const useBoxStore = create((set, get) => ({
     // Draft features for CreateBoxPage (where boxId doesn't exist yet)
     draftFeatures: {
         note: null, // { title, content }
-        todo: null, 
+        todo: null,
         location: null,
         media: null
     },
 
-    setDraftFeature: (key, value) => set((state) => ({ 
-        draftFeatures: { ...state.draftFeatures, [key]: value } 
+    setDraftFeature: (key, value) => set((state) => ({
+        draftFeatures: { ...state.draftFeatures, [key]: value }
     })),
-    
-    clearDraftFeatures: () => set({ 
-        draftFeatures: { note: null, todo: null, location: null, media: null } 
+
+    clearDraftFeatures: () => set({
+        draftFeatures: { note: null, todo: null, location: null, media: null }
     }),
 
     // 1. Kullanıcının tüm chapter'larını çek (GET /api/chapters)
@@ -31,9 +31,9 @@ export const useBoxStore = create((set, get) => ({
             // Backend'den { status: 200, data: [...] } formatında döndüğünü varsayıyoruz
             set({ boxes: response.data.data || response.data, isLoading: false });
         } catch (error) {
-            set({ 
-                error: error.response?.data?.message || 'Boxlar yüklenirken bir hata oluştu.', 
-                isLoading: false 
+            set({
+                error: error.response?.data?.message || 'Boxlar yüklenirken bir hata oluştu.',
+                isLoading: false
             });
         }
     },
@@ -44,7 +44,7 @@ export const useBoxStore = create((set, get) => ({
         try {
             const response = await api.post('/boxes', boxData);
             const newBox = response.data.data || response.data;
-            
+
             // Mevcut listeye ekle
             set((state) => ({
                 boxes: [newBox, ...state.boxes],
@@ -64,7 +64,7 @@ export const useBoxStore = create((set, get) => ({
         try {
             const response = await api.patch(`/boxes/${id}`, updateData);
             const updatedBox = response.data.data || response.data;
-            
+
             // Mevcut listedeki ilgili chapter'ı güncelle
             set((state) => ({
                 boxes: state.boxes.map(bx => bx.id === id ? updatedBox : bx),
@@ -78,12 +78,12 @@ export const useBoxStore = create((set, get) => ({
         }
     },
 
-     // 4. Box sil (DELETE /api/boxes/:id)
+    // 4. Box sil (DELETE /api/boxes/:id)
     deleteBox: async (id) => {
         set({ isLoading: true, error: null });
         try {
             await api.delete(`/boxes/${id}`);
-            
+
             // Listeden çıkar
             set((state) => ({
                 boxes: state.boxes.filter(bx => bx.id !== id),
@@ -98,7 +98,7 @@ export const useBoxStore = create((set, get) => ({
     },
 
     // 5. Medya Yükle (POST /api/media/box/:boxId/photo)
-    uploadBoxPhoto: async (boxId, photoUri, mimeType, fileName) => {
+    uploadBoxPhoto: async (boxId, photoUri, mimeType, fileName, displayName) => {
         try {
             const formData = new FormData();
             formData.append('photo', {
@@ -106,6 +106,9 @@ export const useBoxStore = create((set, get) => ({
                 type: mimeType || 'image/jpeg',
                 name: fileName || `photo_${Date.now()}.jpg`,
             });
+            if (displayName) {
+                formData.append('displayName', displayName);
+            }
 
             const response = await api.post(`/media/box/${boxId}/photo`, formData, {
                 headers: {
@@ -114,12 +117,12 @@ export const useBoxStore = create((set, get) => ({
             });
 
             const updatedPhotos = response.data.data; // Server'dan dönen yeni media_photos dizisi
-            
+
             // Mevcut kutuyu güncelle
             set((state) => ({
-                boxes: state.boxes.map(bx => 
-                    bx.id === boxId 
-                        ? { ...bx, media_photos: updatedPhotos, has_media: true } 
+                boxes: state.boxes.map(bx =>
+                    bx.id === boxId
+                        ? { ...bx, media_photos: updatedPhotos, has_media: true }
                         : bx
                 )
             }));
@@ -138,7 +141,7 @@ export const useBoxStore = create((set, get) => ({
             });
 
             const updatedPhotos = response.data.data;
-            
+
             set((state) => ({
                 boxes: state.boxes.map(bx => {
                     if (bx.id === boxId) {
@@ -156,6 +159,65 @@ export const useBoxStore = create((set, get) => ({
         }
     },
 
-    // 7. State'i temizle (Logout olduğunda çağrılmalı)
+    // 7. Ses Yükle (POST /api/media/box/:boxId/audio)
+    uploadBoxAudio: async (boxId, audioUri, mimeType, fileName, displayName) => {
+        try {
+            const formData = new FormData();
+            formData.append('audio', {
+                uri: audioUri,
+                type: mimeType || 'audio/m4a',
+                name: fileName || `audio_${Date.now()}.m4a`,
+            });
+            if (displayName) {
+                formData.append('displayName', displayName);
+            }
+
+            const response = await api.post(`/media/box/${boxId}/audio`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const updatedAudios = response.data.data;
+
+            set((state) => ({
+                boxes: state.boxes.map(bx =>
+                    String(bx.id) === String(boxId)
+                        ? { ...bx, media_audio: updatedAudios, has_media: true }
+                        : bx
+                )
+            }));
+            return { success: true, data: updatedAudios };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Ses yüklenemedi.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // 8. Ses Sil (DELETE /api/media/box/:boxId/audio)
+    deleteBoxAudio: async (boxId, audioUrl) => {
+        try {
+            const response = await api.delete(`/media/box/${boxId}/audio`, {
+                data: { url: audioUrl }
+            });
+
+            const updatedAudios = response.data.data;
+
+            set((state) => ({
+                boxes: state.boxes.map(bx => {
+                    if (bx.id === boxId) {
+                        return { ...bx, media_audio: updatedAudios };
+                    }
+                    return bx;
+                })
+            }));
+            return { success: true, data: updatedAudios };
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || 'Ses silinemedi.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // 9. State'i temizle (Logout olduğunda çağrılmalı)
     clearBox: () => set({ boxes: [], error: null })
 }))

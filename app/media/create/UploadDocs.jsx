@@ -25,11 +25,11 @@ const DocCard = ({ item, theme, onRemove }) => {
                     dialogTitle: 'Belgeyi Aç',
                 });
             } else {
-                Alert.alert("Hata", "Bu cihazda dosya paylaşımı/açma desteklenmiyor.");
+                Alert.alert("Error", "File sharing or opening is not supported on this device.");
             }
         } catch (error) {
             console.error("Dosya açılamadı:", error);
-            Alert.alert("Hata", "Dosya açılırken bir sorun oluştu.");
+            Alert.alert("Error", "An error occurred while opening the file.");
         }
     };
 
@@ -145,7 +145,7 @@ export default function UploadDocs() {
                 setLocalDocs(prev => [...prev, newDoc]); // YEREL VİTRİNE EKLE
 
             } catch (error) {
-                Alert.alert("Hata", "Belge eklenemedi.");
+                Alert.alert("Error", "Could not add document.");
                 console.error("Dosya Kopyalama Hatası:", error);
             }
         }

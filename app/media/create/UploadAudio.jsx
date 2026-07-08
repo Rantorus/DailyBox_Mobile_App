@@ -152,7 +152,7 @@ export default function UploadAudio() {
     const removeAudio = useMediaStore(state => state.removeAudio);
 
     // YEREL VİTRİN
-    const [localAudios, setLocalAudios] = useState([]);
+    const [localAudios, setLocalAudios] = useState(audios);
     const [playingAudioId, setPlayingAudioId] = useState(null);
 
     // KAYIT DURUMLARI
@@ -195,7 +195,8 @@ export default function UploadAudio() {
                 const sourceFile = new File(asset.uri);
                 
                 const originalName = asset.name || 'audio.m4a';
-                const uniqueFileName = `${Date.now()}_${originalName.replace(/\s+/g, '_')}`;
+                // Dosya sistemi kopyası için güvenli isim (boşluk/özel karakter yok)
+                const uniqueFileName = `${Date.now()}_audio.m4a`;
                 
                 const destinationFile = new File(Paths.document, uniqueFileName);
 
@@ -204,7 +205,7 @@ export default function UploadAudio() {
                 const newAudio = {
                     id: Date.now().toString(),
                     uri: destinationFile.uri,
-                    name: originalName, 
+                    name: originalName, // Orijinal isim korunuyor (boşluklu, Türkçe karakterli)
                     date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                 };
 
@@ -212,8 +213,8 @@ export default function UploadAudio() {
                 setLocalAudios(prev => [...prev, newAudio]);
 
             } catch (error) {
-                Alert.alert("Hata", "Ses dosyası eklenemedi.");
-                console.error("Dosya Kopyalama Hatası:", error);
+                Alert.alert("Error", "Could not add audio file.");
+                console.error("Save Error Details:", error);
             }
         }
     };
@@ -224,7 +225,7 @@ export default function UploadAudio() {
         try {
             const { granted } = await Audio.getPermissionsAsync();
             if (!granted) {
-                Alert.alert('İzin Gerekli', 'Mikrofon izni vermelisiniz.');
+                Alert.alert('Permission Required', 'Microphone access is needed.');
                 return;
             }
 
@@ -274,7 +275,7 @@ export default function UploadAudio() {
         if (save) {
             const uri = recording.getURI();
             setPendingUri(uri);
-            setRecordTitle(`Ses Kaydı ${audios.length + 1}`);
+            setRecordTitle(`Voice Record ${audios.length + 1}`);
             setShowTitleModal(true);
         }
         
@@ -293,7 +294,7 @@ export default function UploadAudio() {
         const newAudio = {
             id: Date.now().toString(),
             uri: destinationFile.uri,
-            name: recordTitle.trim() || "Ses Kaydı",
+            name: recordTitle.trim() || "Voice Record",
             date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         };
 

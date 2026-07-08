@@ -44,7 +44,7 @@ export default function UploadPhoto() {
             if (result.success) {
                 setLocalImages(prev => prev.filter(image => image.uri !== uri));
             } else {
-                Alert.alert("Hata", result.error || "Fotoğraf silinemedi.");
+                Alert.alert("Error", result.error || "Could not delete photo.");
             }
         } else {
             // DRAFT SİLME (Create modunda açılmışsa)
@@ -66,22 +66,27 @@ export default function UploadPhoto() {
         if (boxId) {
             // BACKEND YÜKLEME (Edit modunda açılmışsa)
             setIsUploading(true);
-            const fileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
-            const match = /\.(\w+)$/.exec(fileName);
+            const originalFileName = cacheUri.split('/').pop() || `photo_${Date.now()}.jpg`;
+            const match = /\.(\w+)$/.exec(originalFileName);
+            const ext = match ? match[1] : 'jpg';
             const type = match ? `image/${match[1]}` : `image`;
+            
+            const safeName = `photo_${Date.now()}.${ext}`;
+            const displayName = originalFileName;
 
-            const result = await uploadBoxPhoto(boxId, cacheUri, type, fileName);
+            const result = await uploadBoxPhoto(boxId, cacheUri, type, safeName, displayName);
             setIsUploading(false);
 
             if (result.success) {
                 // Backend başarılıysa, server'dan dönen en son yüklenen fotoğrafı vitrine ekleyelim
-                // result.data bize güncel media_photos array'ini veriyor
+                // result.data bize güncel media_photos array'ini veriyor (JSONB objeler)
                 const updatedPhotos = result.data;
-                const newPhotoUrl = updatedPhotos[updatedPhotos.length - 1]; // son eklenen
+                const lastPhoto = updatedPhotos[updatedPhotos.length - 1]; // son eklenen obje
+                const photoUri = typeof lastPhoto === 'object' ? lastPhoto.url : lastPhoto;
                 
-                setLocalImages(prev => [...prev, { id: Date.now().toString(), uri: newPhotoUrl }]);
+                setLocalImages(prev => [...prev, { id: Date.now().toString(), uri: photoUri }]);
             } else {
-                Alert.alert("Hata", result.error || "Fotoğraf yüklenemedi.");
+                Alert.alert("Error", result.error || "Could not upload photo.");
             }
         } else {
             // DRAFT YÜKLEME (Create modunda açılmışsa)
@@ -102,8 +107,8 @@ export default function UploadPhoto() {
                 setLocalImages(prev => [...prev, newImage]); // YEREL VİTRİNE EKLE
 
             } catch (error) {
-                Alert.alert("Hata", "Fotoğraf kaydedilemedi.");
-                console.error("Kayıt Hatası Detayı:", error);
+                Alert.alert("Error", "Could not save photo.");
+                console.error("Save Error Details:", error);
             }
         }
     };
@@ -111,7 +116,7 @@ export default function UploadPhoto() {
     const pickFromGallery = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('İzin Gerekli', 'Galeriye erişim izni vermelisiniz.');
+            Alert.alert('Permission Required', 'Gallery access is needed.');
             return;
         }
 
@@ -131,7 +136,7 @@ export default function UploadPhoto() {
     const takeWithCamera = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('İzin Gerekli', 'Kameraya erişim izni vermelisiniz.');
+            Alert.alert('Permission Required', 'Camera access is needed.');
             return;
         }
         let result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
@@ -153,7 +158,7 @@ export default function UploadPhoto() {
                 {isUploading && (
                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15 }}>
                         <ActivityIndicator size="large" color={theme.primary} />
-                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>Uploading...</ThemedText>
+                        <ThemedText style={{ color: '#fff', marginTop: 10, fontWeight: 'bold' }}>Processing...</ThemedText>
                     </View>
                 )}
                 {localImages.length === 0 ? (

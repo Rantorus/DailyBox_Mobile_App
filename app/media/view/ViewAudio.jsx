@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, FlatList, TouchableOpacity } from 'react-native'; // <-- TouchableOpacity eklendi
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,8 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { Colors } from '../../../constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 import { useMediaStore } from '../../../store/mediaStore';
+import { useBoxStore } from '../../../store/boxStore';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 
 // ALT BİLEŞEN: SADECE OKUNUR (READ-ONLY) SES OYNATICI
 const AudioPlayerReadOnly = ({ item, theme, playingId, setPlayingId }) => {
@@ -23,14 +25,18 @@ const AudioPlayerReadOnly = ({ item, theme, playingId, setPlayingId }) => {
         let currentSound = null;
         
         const initSound = async () => {
-            const { sound: newSound, status } = await Audio.Sound.createAsync(
-                { uri: item.uri },
-                { shouldPlay: false },
-                onPlaybackStatusUpdate
-            );
-            currentSound = newSound;
-            setSound(newSound);
-            if (status.durationMillis) setDuration(status.durationMillis);
+            try {
+                const { sound: newSound, status } = await Audio.Sound.createAsync(
+                    { uri: item.uri },
+                    { shouldPlay: false },
+                    onPlaybackStatusUpdate
+                );
+                currentSound = newSound;
+                setSound(newSound);
+                if (status.durationMillis) setDuration(status.durationMillis);
+            } catch (err) {
+                console.error("Ses yükleme hatası (ReadOnly):", err);
+            }
         };
         
         initSound();
@@ -71,6 +77,12 @@ const AudioPlayerReadOnly = ({ item, theme, playingId, setPlayingId }) => {
             setPlayingId(null);
         } else {
             setPlayingId(item.id);
+            
+            // Eğer ses bittikten sonra tekrar play'e basıldıysa (position 0'a çekilmişti), başa sar
+            if (position === 0) {
+                await sound.setPositionAsync(0);
+            }
+            
             await sound.playAsync();
             setIsPlaying(true);
         }
@@ -123,8 +135,32 @@ const AudioPlayerReadOnly = ({ item, theme, playingId, setPlayingId }) => {
 export default function ViewAudio() {
     const { themeName } = useTheme();
     const theme = Colors[themeName];
+    const params = useLocalSearchParams();
+    
+    // BACKEND & STORE
+    const storeBoxId = useMediaStore(state => state.currentBoxId);
+    const boxId = params.boxId || storeBoxId;
+    
+    const boxes = useBoxStore(state => state.boxes);
+    const boxData = boxes.find((data) => String(data.id) === String(boxId));
 
-    const audios = useMediaStore(state => state.audios);
+    // Box verisinden sesleri çekiyoruz (Artık db'den obje olarak geliyor: { url, name })
+    const audios = boxData?.media_audio?.map((media, index) => {
+        let originalName = media.name || media.url.split('/').pop();
+        
+        try {
+            originalName = decodeURIComponent(originalName);
+        } catch (e) {
+            // Decoding başarısız olursa orijinal haliyle kalsın
+        }
+        
+        return {
+            id: index.toString(),
+            uri: media.url,
+            name: originalName
+        };
+    }) || [];
+
     const [playingAudioId, setPlayingAudioId] = useState(null);
 
     useEffect(() => {
@@ -134,6 +170,15 @@ export default function ViewAudio() {
             });
         })();
     }, []);
+
+    // Ekrandan çıkıldığında (örneğin Edit'e basıldığında) çalan sesi durdurur.
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                setPlayingAudioId(null);
+            };
+        }, [])
+    );
 
     return (
         <ThemedView style={styles.container} safe={true}>

@@ -29,9 +29,10 @@ export default function ViewPhoto() {
         const boxData = boxes.find(b => String(b.id) === String(boxId));
         if (!boxData || !boxData.media_photos) return [];
         
-        return boxData.media_photos.map((url, index) => ({
+        return boxData.media_photos.map((media, index) => ({
             id: String(index),
-            uri: url
+            uri: media.url,
+            name: media.name
         }));
     }, [boxId, boxes]);
 

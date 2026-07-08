@@ -24,11 +24,11 @@ const DocCardReadOnly = ({ item, theme }) => {
                     dialogTitle: 'Belgeyi Aç',
                 });
             } else {
-                Alert.alert("Hata", "Bu cihazda dosya paylaşımı veya açma desteklenmiyor.");
+                Alert.alert("Error", "File sharing or opening is not supported on this device.");
             }
         } catch (error) {
             console.error("Dosya açılamadı:", error);
-            Alert.alert("Hata", "Dosya açılırken bir sorun oluştu.");
+            Alert.alert("Error", "An error occurred while opening the file.");
         }
     };
 

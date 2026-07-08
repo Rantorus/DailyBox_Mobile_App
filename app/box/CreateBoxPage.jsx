@@ -54,6 +54,7 @@ const CreateBoxPage = () => {
     const boxes = useBoxStore(state => state.boxes);
     const createBox = useBoxStore(state => state.createBox);
     const uploadBoxPhoto = useBoxStore(state => state.uploadBoxPhoto);
+    const uploadBoxAudio = useBoxStore(state => state.uploadBoxAudio);
     const isLoading = useBoxStore(state => state.isLoading);
 
     // Draft Features
@@ -167,10 +168,41 @@ const CreateBoxPage = () => {
                 // Draft media photos yükleyelim
                 if (hasMedia && draftFeatures.media && draftFeatures.media.photos && draftFeatures.media.photos.length > 0) {
                     for (let photo of draftFeatures.media.photos) {
-                        const filename = photo.uri.split('/').pop() || `photo_${Date.now()}.jpg`;
-                        const match = /\.(\w+)$/.exec(filename);
+                        const originalFilename = photo.uri.split('/').pop() || `photo_${Date.now()}.jpg`;
+                        const match = /\.(\w+)$/.exec(originalFilename);
+                        const ext = match ? match[1] : 'jpg';
                         const type = match ? `image/${match[1]}` : `image`;
-                        await uploadBoxPhoto(result.data.id, photo.uri, type, filename);
+                        
+                        const safeName = `photo_${Date.now()}.${ext}`;
+                        const displayName = originalFilename;
+                        
+                        const resPhoto = await uploadBoxPhoto(result.data.id, photo.uri, type, safeName, displayName);
+                        if (!resPhoto.success) {
+                            Alert.alert("Fotoğraf Yüklenemedi", resPhoto.error);
+                        }
+                    }
+                }
+
+                // Draft media audio yükleyelim
+                if (hasMedia && draftFeatures.media && draftFeatures.media.audio && draftFeatures.media.audio.length > 0) {
+                    for (let audio of draftFeatures.media.audio) {
+                        const match = /\.(\w+)$/.exec(audio.uri);
+                        const ext = match ? match[1] : 'm4a';
+                        const mimeType = ext === 'mp3' ? 'audio/mpeg' : (ext === 'wav' ? 'audio/wav' : 'audio/m4a');
+                        
+                        // Multipart taşıma için güvenli dosya ismi (boşluk/Türkçe karakter yok)
+                        const safeName = `audio_${Date.now()}.${ext}`;
+                        
+                        // Kullanıcının verdiği orijinal isim (boşluklu, Türkçe karakterli olabilir)
+                        let displayName = audio.name || safeName;
+                        if (displayName && !displayName.includes('.')) {
+                            displayName += `.${ext}`;
+                        }
+                        
+                        const resAudio = await uploadBoxAudio(result.data.id, audio.uri, mimeType, safeName, displayName);
+                        if (!resAudio.success) {
+                            Alert.alert("Ses Yüklenemedi", resAudio.error);
+                        }
                     }
                 }
 
