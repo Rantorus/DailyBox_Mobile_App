@@ -9,6 +9,9 @@ export const useUserStore = create((set, get) => ({
     isLoading: false,
     isDeleting: false,
     error: null,
+    pendingLoginCredentials: null,
+
+    setPendingLoginCredentials: (creds) => set({ pendingLoginCredentials: creds }),
 
     setBiometricEnabled: (value) => {
         saveBiometricSetting(value);
@@ -143,7 +146,7 @@ export const useUserStore = create((set, get) => ({
         } catch (error) {
             console.error("Avatar upload error:", error);
             set({
-                error: error.response?.data?.message || 'Profil fotoğrafı yüklenemedi.',
+                error: error.response?.data?.message || 'Profile photo could not be uploaded.',
                 isLoading: false
             });
             return { success: false, error: error.response?.data?.message };
@@ -171,6 +174,19 @@ export const useUserStore = create((set, get) => ({
                 isDeleting: false
             });
             return { success: false, error: error.response?.data?.message };
+        }
+    },
+
+    // Şifre Değiştirme
+    changePassword: async (oldPassword, newPassword) => {
+        set({ error: null });
+        try {
+            await api.patch('/users/change-password', { oldPassword, newPassword });
+            return { success: true };
+        } catch (error) {
+            console.error("Change password error:", error);
+            const errorMsg = error.response?.data?.message || 'Password could not be changed.';
+            return { success: false, error: errorMsg };
         }
     }
 }));

@@ -97,9 +97,17 @@ const EditBoxPage = () => {
         } else if (featureType === 'media') {
             updatePayload = { hasMedia: false, mediaPhotos: [], mediaDocs: [], mediaAudio: [] };
         } else if (featureType === 'todos') {
-            // Todos are in a separate table, but we can set a flag or just alert
-            Alert.alert("Info", "Todos must be deleted individually inside the Todo screen.");
-            return;
+            try {
+                const response = await api.get(`/todos/box/${boxDataId}`);
+                const todos = response.data.data || response.data || [];
+                await Promise.all(todos.map(todo => api.delete(`/todos/${todo.id}`)));
+                setHasTodos(false);
+                return; // Todos veritabanından silindi, boxes tablosunu güncellemeye gerek yok.
+            } catch (err) {
+                console.log("Error deleting todos in bulk:", err);
+                Alert.alert("Error", "Failed to delete all todos from server.");
+                return;
+            }
         }
 
         const result = await updateBox(boxDataId, updatePayload);

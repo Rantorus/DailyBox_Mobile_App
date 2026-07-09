@@ -3,7 +3,7 @@ export const dummyUsers = [
         id: "usr_948274",
         fullName: "Süleyman Karnas",
         email: "karnassuleyman01@gmail.com",
-        password: "adminPassword123", // Test için eklendi
+        password: "Karnas123", // Test için eklendi
         avatar: "https://i.pravatar.cc/150?u=tarik",
         location: "Adana, TR",
         role: "admin",

@@ -52,7 +52,7 @@ const AudioPlayer = ({ item, theme, onRemove, playingId, setPlayingId }) => {
         return () => {
             if (currentSound) {
                 currentSound.setOnPlaybackStatusUpdate(null);
-                currentSound.unloadAsync();
+                currentSound.unloadAsync().catch(() => {});
             }
         };
     }, [item.uri]);

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView, Image, Modal, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ScrollView, Image, Modal, Alert, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 
 import ThemedView from '../../components/ThemedView';
 import ThemedText from '../../components/ThemedText';
+import ThemedInput from '../../components/ThemedInput';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
@@ -57,6 +59,16 @@ export default function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
   const [isThemesVisible, setIsThemesVisible] = useState(false);
+
+  // ==========================================
+  // ŞİFRE DEĞİŞTİRME STATE'LERİ
+  // ==========================================
+  const [isPasswordPanelVisible, setIsPasswordPanelVisible] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const changePassword = useUserStore((state) => state.changePassword);
 
   // ==========================================
   // DİNAMİK VERİ HESAPLAMALARI
@@ -186,6 +198,45 @@ export default function ProfilePage() {
     );
   };
 
+  // ŞİFRE DEĞİŞTİRME İŞLEMİ
+  const handlePasswordChange = async () => {
+    if (!oldPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      Alert.alert("Error", "Please fill in all password fields.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Error", "New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const result = await changePassword(oldPassword, newPassword);
+    setIsChangingPassword(false);
+
+    if (result.success) {
+      Alert.alert("Success", "Password changed successfully! You will be logged out.", [
+        {
+          text: "OK",
+          onPress: async () => {
+            const passedEmail = activeUserEmail;
+            const passedPassword = newPassword;
+            
+            // Login sayfasında doldurulması için bilgileri global store'a kaydet
+            useUserStore.getState().setPendingLoginCredentials({ email: passedEmail, password: passedPassword });
+
+            await logoutUser();
+            setIsPasswordPanelVisible(false);
+            setOldPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+          }
+        }
+      ]);
+    } else {
+      Alert.alert("Error", result.error || "Failed to change password.");
+    }
+  };
+
   // ==========================================
   // YARDIMCI BİLEŞENLER
   // ==========================================
@@ -198,11 +249,12 @@ export default function ProfilePage() {
     </View>
   );
 
-  const SettingItem = ({ icon, label, rightIcon, rightText, disabled }) => (
+  const SettingItem = ({ icon, label, rightIcon, rightText, disabled, onPress }) => (
     <TouchableOpacity
       style={[styles.settingItem, disabled && { opacity: 0.4 }]}
       disabled={disabled}
       activeOpacity={0.7}
+      onPress={onPress}
     >
       <View style={styles.settingLeft}>
         <Ionicons name={icon} size={20} color={theme.text} style={{ marginRight: 12 }} />
@@ -289,7 +341,13 @@ export default function ProfilePage() {
         {/* --- 3. ACCOUNT & SECURITY --- */}
         <SectionTitle title="ACCOUNT & SECURITY" icon="shield-half" />
         <View style={{ marginBottom: 20 }}>
-          <SettingItem icon="key" label="Change Password" rightIcon="chevron-forward" disabled={true} />
+          <SettingItem 
+            icon="key" 
+            label="Change Password" 
+            rightIcon="chevron-forward" 
+            disabled={false} 
+            onPress={() => setIsPasswordPanelVisible(true)} 
+          />
           
           <TouchableOpacity
             style={styles.settingItem}
@@ -440,6 +498,91 @@ export default function ProfilePage() {
       </View>
     </Modal>
 
+    {/* ALTTAN ÇIKAN ŞİFRE DEĞİŞTİRME PANELİ */}
+    <Modal visible={isPasswordPanelVisible} transparent={true} animationType="fade">
+      <View style={styles.overlay}>
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFillObject} 
+          activeOpacity={1} 
+          onPress={() => {
+            if (!isChangingPassword) {
+              setIsPasswordPanelVisible(false);
+              setOldPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+              Keyboard.dismiss();
+            }
+          }} 
+        />
+        <KeyboardAwareScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
+          enableOnAndroid={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 40 : 40}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ThemedView style={[styles.bottomSheet, { position: 'relative', bottom: 0, width: '100%' }]}>
+              <View style={styles.sheetHeader}>
+                <ThemedText title={true} style={{ fontSize: 20 }}>Change Password</ThemedText>
+                <TouchableOpacity onPress={() => {
+                  setIsPasswordPanelVisible(false);
+                  setOldPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  Keyboard.dismiss();
+                }}>
+                  <Ionicons name="close-circle" size={30} color={theme.textLight} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
+
+              <View style={{ gap: 15 }}>
+                <ThemedInput
+                  placeholder="Old Password"
+                  secureTextEntry
+                  value={oldPassword}
+                  onChangeText={setOldPassword}
+                  editable={!isChangingPassword}
+                  autoCapitalize="none"
+                />
+                <ThemedInput
+                  placeholder="New Password"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  editable={!isChangingPassword}
+                  autoCapitalize="none"
+                />
+                <ThemedInput
+                  placeholder="Confirm New Password"
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  editable={!isChangingPassword}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.filterButton, { backgroundColor: theme.primary, marginTop: 25 }]}
+                onPress={handlePasswordChange}
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>SUBMIT</ThemedText>
+                )}
+              </TouchableOpacity>
+            </ThemedView>
+          </TouchableWithoutFeedback>
+        </KeyboardAwareScrollView>
+      </View>
+    </Modal>
+
     </ThemedView>
   );
 }
@@ -532,5 +675,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
+  },
+  // --- BOTTOM SHEET (ŞİFRE DEĞİŞTİRME) STİLLERİ ---
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    zIndex: 998,
+  },
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    height: "auto",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 25,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 15,
+  },
+  filterButton: {
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
   }
 });

@@ -44,7 +44,7 @@ const AudioPlayerReadOnly = ({ item, theme, playingId, setPlayingId }) => {
         return () => {
             if (currentSound) {
                 currentSound.setOnPlaybackStatusUpdate(null);
-                currentSound.unloadAsync();
+                currentSound.unloadAsync().catch(() => {});
             }
         };
     }, [item.uri]);

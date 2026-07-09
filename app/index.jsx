@@ -30,11 +30,15 @@ const index = () => {
     const isBiometricEnabled = useUserStore(state => state.isBiometricEnabled);
     const activeUser = useUserStore(state => state.activeUser);
     const isAuthChecking = useUserStore(state => state.isAuthChecking);
+    
+    const pendingLoginCredentials = useUserStore(state => state.pendingLoginCredentials);
+    const setPendingLoginCredentials = useUserStore(state => state.setPendingLoginCredentials);
 
-    const [email, setEmail] = useState('karnassuleyman01@gmail.com')
-    const [password, setPassword] = useState('adminPassword123')
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState('')
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
     // Register sayfasından dönen verileri yakala
     const params = useLocalSearchParams();
@@ -47,8 +51,14 @@ const index = () => {
             // Parametreleri temizliyoruz ki kullanıcı sonradan bu alanları silebilsin veya değiştirebilsin.
             // Aksi takdirde Expo Router her render'da bu verileri geri yazar.
             router.setParams({ registeredEmail: '', registeredPassword: '' });
+        } else if (pendingLoginCredentials) {
+            // Şifre değiştirme işleminden dönen bilgileri doldur
+            setEmail(pendingLoginCredentials.email);
+            setPassword(pendingLoginCredentials.password);
+            // Bilgileri yerleştirdikten sonra global store'dan temizle
+            setPendingLoginCredentials(null);
         }
-    }, [params.registeredEmail, params.registeredPassword]);
+    }, [params.registeredEmail, params.registeredPassword, pendingLoginCredentials]);
 
     useEffect(() => {
         if (error !== '') {
@@ -136,16 +146,30 @@ const index = () => {
                         keyboardType="email-address"
                         onChangeText={setEmail}
                         value={email}
+                        autoCapitalize="none"
                     />
 
-                    <ThemedInput
-                        style={{ width: "80%", marginBottom: 20 }}
-                        placeholder="Password"
-                        placeholderTextColor={theme.textLight}
-                        onChangeText={setPassword}
-                        value={password}
-                        secureTextEntry
-                    />
+                    <View style={{ width: "80%", marginBottom: 20, position: 'relative', justifyContent: 'center' }}>
+                        <ThemedInput
+                            style={{ width: "100%", paddingRight: 50 }}
+                            placeholder="Password"
+                            placeholderTextColor={theme.textLight}
+                            onChangeText={setPassword}
+                            value={password}
+                            secureTextEntry={!isPasswordVisible}
+                            autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                            style={{ position: 'absolute', right: 15 }}
+                            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                        >
+                            <Ionicons 
+                                name={isPasswordVisible ? "eye-outline" : "eye-off-outline"} 
+                                size={24} 
+                                color={theme.textLight} 
+                            />
+                        </TouchableOpacity>
+                    </View>
 
                     {error !== '' && (
                         <>

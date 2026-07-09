@@ -128,7 +128,7 @@ export const useBoxStore = create((set, get) => ({
             }));
             return { success: true, data: updatedPhotos };
         } catch (error) {
-            const errorMsg = error.response?.data?.message || 'Fotoğraf yüklenemedi.';
+            const errorMsg = error.response?.data?.message || 'Photo could not be uploaded.';
             return { success: false, error: errorMsg };
         }
     },
@@ -189,7 +189,7 @@ export const useBoxStore = create((set, get) => ({
             }));
             return { success: true, data: updatedAudios };
         } catch (error) {
-            const errorMsg = error.response?.data?.message || 'Ses yüklenemedi.';
+            const errorMsg = error.response?.data?.message || 'Audio could not be uploaded.';
             return { success: false, error: errorMsg };
         }
     },
@@ -247,7 +247,7 @@ export const useBoxStore = create((set, get) => ({
             }));
             return { success: true, data: updatedDocs };
         } catch (error) {
-            const errorMsg = error.response?.data?.message || 'Döküman yüklenemedi.';
+            const errorMsg = error.response?.data?.message || 'Document could not be uploaded.';
             return { success: false, error: errorMsg };
         }
     },
