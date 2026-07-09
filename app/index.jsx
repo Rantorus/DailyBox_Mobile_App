@@ -11,7 +11,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '../constants/Colors'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { dummyUsers } from '../fetchUser/userInfo.js'
 
 // 1. OLUŞTURDUĞUMUZ STORE'U İÇERİ AKTAR
 import { useUserStore } from '../store/useStore.jsx'

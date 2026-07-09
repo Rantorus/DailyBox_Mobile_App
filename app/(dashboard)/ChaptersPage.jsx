@@ -45,7 +45,7 @@ const ChaptersPage = () => {
   const [tempSelectedTypes, setTempSelectedTypes] = useState([]);
 
   // DİNAMİK TİP LİSTESİ ÇIKARMA
-  // dummyBoxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
+  // Veritabanından gelen chapters içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
   const availableTypes = useMemo(() => {
     const allTypes = chapters.map(box => box.type);
     return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş olanları temizler

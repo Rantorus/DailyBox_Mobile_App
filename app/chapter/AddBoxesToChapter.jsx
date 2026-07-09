@@ -50,7 +50,7 @@ const AddBoxesToChapter = () => {
     };
 
     // DİNAMİK TİP LİSTESİ ÇIKARMA
-    // dummyBoxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
+    // Veritabanından gelen boxes içindeki tüm 'type' değerlerini alır ve tekrar edenleri (Set ile) eler.
     const availableTypes = useMemo(() => {
         const allTypes = boxes.map(box => box.type);
         return [...new Set(allTypes)].filter(Boolean); // filter(Boolean) boş olanları temizler
