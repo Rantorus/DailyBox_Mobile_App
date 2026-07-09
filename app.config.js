@@ -37,25 +37,32 @@ module.exports = {
       [
         "expo-calendar",
         {
-          "calendarPermission": "The app needs to access your calendar."
+          "calendarPermission": "DailyBox needs to access your calendar to sync your reminders."
         }
       ],
       [
         "expo-av",
         {
-          "microphonePermission": "Uygulamanın ses kaydedebilmesi için mikrofona erişmesi gerekiyor."
+          "microphonePermission": "DailyBox needs microphone access to record voice notes for your boxes."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Uygulamanın haritada yerinizi gösterebilmesi için konumunuza erişmesi gerekiyor."
+          "locationAlwaysAndWhenInUsePermission": "DailyBox needs access to your location to attach locations to your boxes."
         }
       ],
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Uygulamaya hızlı giriş için Face ID kullanmak istiyor."
+          "faceIDPermission": "DailyBox uses Face ID to securely unlock your private application."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DailyBox needs access to your photo library to let you attach photos to your boxes.",
+          "cameraPermission": "DailyBox needs access to your camera to let you take and attach photos to your boxes."
         }
       ],
       [

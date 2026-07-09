@@ -105,7 +105,7 @@ const ChapterDetail = () => {
 
                 {/* Yıldız İkonu (Sağ üst köşeye sabitlendi) */}
                 <View style={{ position: "absolute", top: 5, right: 5 }}>
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => console.log("Favori tıklandı")}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
                         {chapterData.is_favorite || chapterData.isFavorite ? (
                             <Ionicons name="star" size={24} color={theme.primary} /> // Favori rengi genelde altın/sarı olur
                         ) : (
