@@ -15,7 +15,7 @@ import { useChapterStore } from '../../store/chapterStore';
 
 // Global Store'lar
 import { useMediaStore } from '../../store/mediaStore';
-import { useUserStore } from '../../store/useStore'; 
+import { useUserStore } from '../../store/useStore';
 
 import * as LocalAuthentication from 'expo-local-authentication';
 
@@ -54,7 +54,7 @@ export default function ProfilePage() {
   // PROFİL FOTOĞRAFI STATE'LERİ
   // ==========================================
   // İleride bu veriyi Zustand store'da (activeUser.profilePic vb.) tutabilirsin
-  const [profileImage, setProfileImage] = useState(null); 
+  const [profileImage, setProfileImage] = useState(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isPhotoModalVisible, setIsPhotoModalVisible] = useState(false);
   const [isThemesVisible, setIsThemesVisible] = useState(false);
@@ -77,7 +77,7 @@ export default function ProfilePage() {
 
   const chapters = useChapterStore((state) => state.chapters);
   const boxes = useBoxStore((state) => state.boxes);
-  
+
   const boxesCount = boxes?.length || 0;
   const chaptersCount = chapters?.length || 0;
   const logsCount = boxes?.filter(box => box.category === 'log').length || 0;
@@ -112,7 +112,7 @@ export default function ProfilePage() {
   // FOTOĞRAF SEÇME VEYA ÇEKME İŞLEMİ
   const pickImage = async (useCamera = false) => {
     let result;
-    
+
     if (useCamera) {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -140,14 +140,14 @@ export default function ProfilePage() {
     if (!result.canceled) {
       const selectedUri = result.assets[0].uri;
       setProfileImage(selectedUri); // Geçici olarak lokalde göster
-      
+
       // Sunucuya yükle
       setIsUploadingAvatar(true);
       const uploadResult = await uploadAvatar(selectedUri);
       setIsUploadingAvatar(false);
 
       if (!uploadResult.success) {
-          Alert.alert("Upload Failed", uploadResult.error || "Failed to upload avatar.");
+        Alert.alert("Upload Failed", uploadResult.error || "Failed to upload avatar.");
       }
     }
   };
@@ -181,8 +181,8 @@ export default function ProfilePage() {
       "Are you sure you want to delete your account? This action cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
           onPress: async () => {
             const result = await deleteAccount();
@@ -219,7 +219,7 @@ export default function ProfilePage() {
           onPress: async () => {
             const passedEmail = activeUserEmail;
             const passedPassword = newPassword;
-            
+
             // Login sayfasında doldurulması için bilgileri global store'a kaydet
             useUserStore.getState().setPendingLoginCredentials({ email: passedEmail, password: passedPassword });
 
@@ -273,24 +273,24 @@ export default function ProfilePage() {
         {/* --- 1. PROFİL BAŞLIĞI (DİNAMİK) --- */}
         <View style={styles.profileHeader}>
           {/* Avatar'ı TouchableOpacity ile sarmaladık */}
-          <TouchableOpacity 
-            onPress={handleAvatarPress} 
+          <TouchableOpacity
+            onPress={handleAvatarPress}
             activeOpacity={0.8}
             style={[styles.avatarBox, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}
           >
             {isUploadingAvatar ? (
-                <View style={[styles.avatarImage, { justifyContent: 'center', alignItems: 'center' }]}>
-                    <Ionicons name="refresh" size={24} color={theme.textLight} />
-                </View>
+              <View style={[styles.avatarImage, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Ionicons name="refresh" size={24} color={theme.textLight} />
+              </View>
             ) : activeUser?.avatar || profileImage ? (
-                <Image source={{ uri: activeUser?.avatar || profileImage }} style={styles.avatarImage} />
+              <Image source={{ uri: activeUser?.avatar || profileImage }} style={styles.avatarImage} />
             ) : (
-                <Ionicons name="person" size={40} color={theme.textLight} />
+              <Ionicons name="person" size={40} color={theme.textLight} />
             )}
-            
+
             {/* Küçük düzenleme ikonu (Kullanıcıya buraya tıklanabildiğini hissettirir) */}
             <View style={[styles.editBadge, { backgroundColor: theme.primary }]}>
-                <Ionicons name="camera" size={12} color="#fff" />
+              <Ionicons name="camera" size={12} color="#fff" />
             </View>
           </TouchableOpacity>
 
@@ -340,14 +340,14 @@ export default function ProfilePage() {
         {/* --- 3. ACCOUNT & SECURITY --- */}
         <SectionTitle title="ACCOUNT & SECURITY" icon="shield-half" />
         <View style={{ marginBottom: 20 }}>
-          <SettingItem 
-            icon="key" 
-            label="Change Password" 
-            rightIcon="chevron-forward" 
-            disabled={false} 
-            onPress={() => setIsPasswordPanelVisible(true)} 
+          <SettingItem
+            icon="key"
+            label="Change Password"
+            rightIcon="chevron-forward"
+            disabled={false}
+            onPress={() => setIsPasswordPanelVisible(true)}
           />
-          
+
           <TouchableOpacity
             style={styles.settingItem}
             onPress={handleBiometricToggle}
@@ -376,8 +376,8 @@ export default function ProfilePage() {
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
         {/* --- 4. APPEARANCE (TEMA) --- */}
-        <TouchableOpacity 
-          activeOpacity={0.7} 
+        <TouchableOpacity
+          activeOpacity={0.7}
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 }}
           onPress={() => setIsThemesVisible(!isThemesVisible)}
         >
@@ -393,36 +393,36 @@ export default function ProfilePage() {
         {isThemesVisible && (
           <View style={{ marginBottom: 20 }}>
             {THEME_OPTIONS.map((item) => {
-            const itemTheme = Colors[item.id];
-            const isSelected = themeName === item.id;
+              const itemTheme = Colors[item.id];
+              const isSelected = themeName === item.id;
 
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.themeOptionBtn,
-                  isSelected && { backgroundColor: itemTheme.primary + '15', borderColor: itemTheme.primary }
-                ]}
-                onPress={() => setThemeName(item.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.themeOptionLeft}>
-                  <Ionicons name={item.icon} size={22} color={itemTheme.primary} style={{ marginRight: 12 }} />
-                  <ThemedText style={[
-                    { fontSize: 15 },
-                    isSelected && { fontWeight: 'bold', color: itemTheme.primary }
-                  ]}>
-                    {item.label}
-                  </ThemedText>
-                </View>
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.themeOptionBtn,
+                    isSelected && { backgroundColor: itemTheme.primary + '15', borderColor: itemTheme.primary }
+                  ]}
+                  onPress={() => setThemeName(item.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.themeOptionLeft}>
+                    <Ionicons name={item.icon} size={22} color={itemTheme.primary} style={{ marginRight: 12 }} />
+                    <ThemedText style={[
+                      { fontSize: 15 },
+                      isSelected && { fontWeight: 'bold', color: itemTheme.primary }
+                    ]}>
+                      {item.label}
+                    </ThemedText>
+                  </View>
 
-                {isSelected && (
-                  <Ionicons name="checkmark-circle" size={22} color={itemTheme.primary} />
-                )}
-              </TouchableOpacity>
-            )
-          })}
-        </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={22} color={itemTheme.primary} />
+                  )}
+                </TouchableOpacity>
+              )
+            })}
+          </View>
         )}
 
         {/* --- 6. ALT AKSİYONLAR (LOGOUT & DELETE) --- */}
@@ -430,7 +430,7 @@ export default function ProfilePage() {
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => {
-              logoutUser(); 
+              logoutUser();
               router.replace("/");
             }}
           >
@@ -438,8 +438,8 @@ export default function ProfilePage() {
             <ThemedText style={{ color: "#EF4444", fontWeight: 'bold', marginLeft: 8 }}>Log Out</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionBtn} 
+          <TouchableOpacity
+            style={styles.actionBtn}
             onPress={confirmDeleteAccount}
           >
             <Ionicons name="trash" size={20} color="#EF4444" />
@@ -453,135 +453,136 @@ export default function ProfilePage() {
           TAM EKRAN FOTOĞRAF MODALI 
       ========================================== */}
       <Modal visible={isPhotoModalVisible} transparent={true} animationType="fade">
-          <View style={styles.modalBackground}>
-              <TouchableOpacity 
-                style={styles.modalCloseButton} 
-                onPress={() => setIsPhotoModalVisible(false)}
-              >
-                  <Ionicons name="close" size={32} color="#FFF" />
-              </TouchableOpacity>
+        <View style={styles.modalBackground}>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setIsPhotoModalVisible(false)}
+          >
+            <Ionicons name="close" size={32} color="#FFF" />
+          </TouchableOpacity>
 
-              <Image 
-                source={{ uri: activeUser?.avatar || profileImage }} 
-                style={styles.fullScreenImage} 
-                resizeMode="contain" 
-              />
+          <Image
+            source={{ uri: activeUser?.avatar || profileImage }}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
 
-              <TouchableOpacity 
-                style={[styles.changePhotoBtn, { backgroundColor: theme.primary }]} 
-                onPress={() => {
-                  setIsPhotoModalVisible(false);
-                  setTimeout(() => showImageOptions(), 300);
-                }}
-              >
-                  <Ionicons name="camera-reverse" size={20} color="#FFF" />
-                  <ThemedText style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 8 }}>
-                    Change Photo
-                  </ThemedText>
-              </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.changePhotoBtn, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              setIsPhotoModalVisible(false);
+              setTimeout(() => showImageOptions(), 300);
+            }}
+          >
+            <Ionicons name="camera-reverse" size={20} color="#FFF" />
+            <ThemedText style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 8 }}>
+              Change Photo
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </Modal>
 
-    {/* ==========================================
+      {/* ==========================================
         SİLME/YÜKLEME BEKLEME EKRANI
     ========================================== */}
-    <Modal visible={isDeletingAccount} transparent={true} animationType="fade">
-      <View style={[styles.modalBackground, { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <ThemedText style={{ color: '#FFF', marginTop: 15, fontSize: 16, fontWeight: 'bold' }}>
-          Deleting account and all associated data...
-        </ThemedText>
-        <ThemedText style={{ color: theme.textLight, marginTop: 5, fontSize: 13, textAlign: 'center', paddingHorizontal: 40 }}>
-          This may take a few moments as we remove your files from the cloud.
-        </ThemedText>
-      </View>
-    </Modal>
+      <Modal visible={isDeletingAccount} transparent={true} animationType="fade">
+        <View style={[styles.modalBackground, { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <ThemedText style={{ color: '#FFF', marginTop: 15, fontSize: 16, fontWeight: 'bold' }}>
+            Deleting account and all associated data...
+          </ThemedText>
+          <ThemedText style={{ color: theme.textLight, marginTop: 5, fontSize: 13, textAlign: 'center', paddingHorizontal: 40 }}>
+            This may take a few moments as we remove your files from the cloud.
+          </ThemedText>
+        </View>
+      </Modal>
 
-    {/* ALTTAN ÇIKAN ŞİFRE DEĞİŞTİRME PANELİ */}
-    <Modal visible={isPasswordPanelVisible} transparent={true} animationType="fade">
-      <View style={styles.overlay}>
-        <TouchableOpacity 
-          style={StyleSheet.absoluteFillObject} 
-          activeOpacity={1} 
-          onPress={() => {
-            if (!isChangingPassword) {
-              setIsPasswordPanelVisible(false);
-              setOldPassword('');
-              setNewPassword('');
-              setConfirmPassword('');
-              Keyboard.dismiss();
-            }
-          }} 
-        />
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      {/* ALTTAN ÇIKAN ŞİFRE DEĞİŞTİRME PANELİ */}
+      <Modal visible={isPasswordPanelVisible} transparent={true} animationType="fade">
+        <View style={styles.overlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={() => {
+              if (!isChangingPassword) {
+                setIsPasswordPanelVisible(false);
+                setOldPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                Keyboard.dismiss();
+              }
+            }}
+          />
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={{ flex: 1, justifyContent: 'flex-end' }}>
                 <ThemedView style={[styles.bottomSheet, { position: 'relative', bottom: 0, width: '100%' }]}>
-              <View style={styles.sheetHeader}>
-                <ThemedText title={true} style={{ fontSize: 20 }}>Change Password</ThemedText>
-                <TouchableOpacity onPress={() => {
-                  setIsPasswordPanelVisible(false);
-                  setOldPassword('');
-                  setNewPassword('');
-                  setConfirmPassword('');
-                  Keyboard.dismiss();
-                }}>
-                  <Ionicons name="close-circle" size={30} color={theme.textLight} />
-                </TouchableOpacity>
+                  <View style={styles.sheetHeader}>
+                    <ThemedText title={true} style={{ fontSize: 20 }}>Change Password</ThemedText>
+                    <TouchableOpacity onPress={() => {
+                      setIsPasswordPanelVisible(false);
+                      setOldPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      Keyboard.dismiss();
+                    }}>
+                      <Ionicons name="close-circle" size={30} color={theme.textLight} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
+
+                  <View style={{ gap: 15 }}>
+                    <ThemedInput
+                      placeholder="Old Password"
+                      placeholderTextColor={theme.textLight}
+                      secureTextEntry
+                      value={oldPassword}
+                      onChangeText={setOldPassword}
+                      editable={!isChangingPassword}
+                      autoCapitalize="none"
+                    />
+                    <ThemedInput
+                      placeholder="New Password"
+                      placeholderTextColor={theme.textLight}
+                      secureTextEntry
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      editable={!isChangingPassword}
+                      autoCapitalize="none"
+                    />
+                    <ThemedInput
+                      placeholder="Confirm New Password"
+                      placeholderTextColor={theme.textLight}
+                      secureTextEntry
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      editable={!isChangingPassword}
+                      autoCapitalize="none"
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.filterButton, { backgroundColor: theme.primary, marginTop: 25 }]}
+                    onPress={handlePasswordChange}
+                    disabled={isChangingPassword}
+                  >
+                    {isChangingPassword ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <ThemedText style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>SUBMIT</ThemedText>
+                    )}
+                  </TouchableOpacity>
+                </ThemedView>
               </View>
-
-              <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
-
-              <View style={{ gap: 15 }}>
-                <ThemedInput
-                  placeholder="Old Password"
-                  placeholderTextColor={theme.textLight}
-                  secureTextEntry
-                  value={oldPassword}
-                  onChangeText={setOldPassword}
-                  editable={!isChangingPassword}
-                  autoCapitalize="none"
-                />
-                <ThemedInput
-                  placeholder="New Password"
-                  placeholderTextColor={theme.textLight}
-                  secureTextEntry
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  editable={!isChangingPassword}
-                  autoCapitalize="none"
-                />
-                <ThemedInput
-                  placeholder="Confirm New Password"
-                  placeholderTextColor={theme.textLight}
-                  secureTextEntry
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  editable={!isChangingPassword}
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.filterButton, { backgroundColor: theme.primary, marginTop: 25 }]}
-                onPress={handlePasswordChange}
-                disabled={isChangingPassword}
-              >
-                {isChangingPassword ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <ThemedText style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>SUBMIT</ThemedText>
-                )}
-                </TouchableOpacity>
-              </ThemedView>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
 
     </ThemedView>
   );
@@ -592,15 +593,15 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
 
   profileHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  
+
   // Avatar Stilleri
-  avatarBox: { 
-    width: 76, 
-    height: 76, 
-    borderWidth: 2, 
-    borderRadius: 20, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
+  avatarBox: {
+    width: 76,
+    height: 76,
+    borderWidth: 2,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 15,
     position: 'relative', // Badge için gerekli
     overflow: 'hidden'
@@ -622,7 +623,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFF', // Etrafında keskin hat
   },
-  
+
   profileInfo: { flex: 1, justifyContent: 'center' },
   divider: { height: 1, width: '100%', marginBottom: 20, opacity: 0.5 },
 

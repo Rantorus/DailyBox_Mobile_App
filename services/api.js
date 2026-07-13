@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken, removeToken } from './tokenService';
 
 // Backend'in URL'si (Production on Render)
-const API_URL = 'http://172.168.100.102:5001/api';
+const API_URL = 'https://dailybox-backend.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_URL,

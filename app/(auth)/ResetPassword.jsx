@@ -13,19 +13,19 @@ import { Ionicons } from '@expo/vector-icons'
 
 const ResetPassword = () => {
     const router = useRouter();
-    const { email } = useLocalSearchParams(); 
+    const { email } = useLocalSearchParams();
     const { themeName } = useTheme();
     const theme = Colors[themeName];
-    
+
     const [otpCode, setOtpCode] = useState('');
     const [localError, setLocalError] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
-    
+
     const [isPasswordPanelVisible, setIsPasswordPanelVisible] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isResetting, setIsResetting] = useState(false);
-    
+
     const verifyOtp = useUserStore(state => state.verifyOtp);
     const verifyAndResetPassword = useUserStore(state => state.verifyAndResetPassword);
     const error = useUserStore(state => state.error);
@@ -75,13 +75,13 @@ const ResetPassword = () => {
     return (
         <ThemedView style={styles.container}>
             <Spacer height={40} />
-            
+
             <ThemedText title={true} style={{ fontSize: 28, fontWeight: 'bold', textAlign: 'center' }}>
                 Verify Code
             </ThemedText>
-            
+
             <Spacer height={20} />
-            
+
             <ThemedText style={{ textAlign: 'center', paddingHorizontal: 30, color: theme.textLight }}>
                 Enter the 6-digit code sent to {email}.
             </ThemedText>
@@ -105,7 +105,7 @@ const ResetPassword = () => {
                     </ThemedText>
                 )}
 
-                <ThemedBtn 
+                <ThemedBtn
                     onPress={handleVerifyOtp}
                     disabled={isVerifying}
                     style={{ opacity: isVerifying ? 0.7 : 1, alignItems: 'center' }}
@@ -119,9 +119,9 @@ const ResetPassword = () => {
             {/* ALTTAN ÇIKAN YENİ ŞİFRE BELİRLEME PANELİ */}
             <Modal visible={isPasswordPanelVisible} transparent={true} animationType="fade">
                 <View style={styles.overlay}>
-                    <TouchableOpacity 
-                        style={StyleSheet.absoluteFillObject} 
-                        activeOpacity={1} 
+                    <TouchableOpacity
+                        style={StyleSheet.absoluteFillObject}
+                        activeOpacity={1}
                         onPress={() => {
                             if (!isResetting) {
                                 setIsPasswordPanelVisible(false);
@@ -129,63 +129,64 @@ const ResetPassword = () => {
                                 setConfirmPassword('');
                                 Keyboard.dismiss();
                             }
-                        }} 
+                        }}
                     />
                     <KeyboardAvoidingView
                         style={{ flex: 1 }}
-                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
                     >
                         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                                <ThemedView style={[styles.bottomSheet, { position: 'relative', bottom: 0, width: '100%', backgroundColor: theme.background }]}>
-                                <View style={styles.sheetHeader}>
-                                    <ThemedText title={true} style={{ fontSize: 20 }}>Create New Password</ThemedText>
-                                    <TouchableOpacity onPress={() => {
-                                        setIsPasswordPanelVisible(false);
-                                        setNewPassword('');
-                                        setConfirmPassword('');
-                                        Keyboard.dismiss();
-                                    }}>
-                                        <Ionicons name="close-circle" size={30} color={theme.textLight} />
+                                <ThemedView style={[styles.bottomSheet, { position: 'relative', bottom: 0, width: '100%' }]}>
+                                    <View style={styles.sheetHeader}>
+                                        <ThemedText title={true} style={{ fontSize: 20 }}>Create New Password</ThemedText>
+                                        <TouchableOpacity onPress={() => {
+                                            setIsPasswordPanelVisible(false);
+                                            setNewPassword('');
+                                            setConfirmPassword('');
+                                            Keyboard.dismiss();
+                                        }}>
+                                            <Ionicons name="close-circle" size={30} color={theme.textLight} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
+
+                                    <View style={{ gap: 15 }}>
+                                        <ThemedInput
+                                            placeholder="New Password"
+                                            placeholderTextColor={theme.textLight}
+                                            secureTextEntry
+                                            value={newPassword}
+                                            onChangeText={setNewPassword}
+                                            editable={!isResetting}
+                                            autoCapitalize="none"
+                                        />
+                                        <ThemedInput
+                                            placeholder="Confirm New Password"
+                                            placeholderTextColor={theme.textLight}
+                                            secureTextEntry
+                                            value={confirmPassword}
+                                            onChangeText={setConfirmPassword}
+                                            editable={!isResetting}
+                                            autoCapitalize="none"
+                                        />
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[styles.filterButton, { backgroundColor: theme.primary, marginTop: 25 }]}
+                                        onPress={handlePasswordChange}
+                                        disabled={isResetting}
+                                    >
+                                        {isResetting ? (
+                                            <ActivityIndicator size="small" color="#fff" />
+                                        ) : (
+                                            <ThemedText style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>SAVE PASSWORD</ThemedText>
+                                        )}
                                     </TouchableOpacity>
-                                </View>
-
-                                <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
-
-                                <View style={{ gap: 15 }}>
-                                    <ThemedInput
-                                        placeholder="New Password"
-                                        placeholderTextColor={theme.textLight}
-                                        secureTextEntry
-                                        value={newPassword}
-                                        onChangeText={setNewPassword}
-                                        editable={!isResetting}
-                                        autoCapitalize="none"
-                                    />
-                                    <ThemedInput
-                                        placeholder="Confirm New Password"
-                                        placeholderTextColor={theme.textLight}
-                                        secureTextEntry
-                                        value={confirmPassword}
-                                        onChangeText={setConfirmPassword}
-                                        editable={!isResetting}
-                                        autoCapitalize="none"
-                                    />
-                                </View>
-
-                                <TouchableOpacity 
-                                    style={[styles.filterButton, { backgroundColor: theme.primary, marginTop: 25 }]}
-                                    onPress={handlePasswordChange}
-                                    disabled={isResetting}
-                                >
-                                    {isResetting ? (
-                                        <ActivityIndicator size="small" color="#fff" />
-                                    ) : (
-                                        <ThemedText style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>SAVE PASSWORD</ThemedText>
-                                    )}
-                                </TouchableOpacity>
-                            </ThemedView>
-                        </View>
+                                </ThemedView>
+                            </View>
                         </TouchableWithoutFeedback>
                     </KeyboardAvoidingView>
                 </View>
@@ -201,22 +202,25 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    overlay: { 
-        flex: 1, 
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        zIndex: 998,
     },
     bottomSheet: {
-        borderTopLeftRadius: 25,
-        borderTopRightRadius: 25,
-        paddingHorizontal: 20,
-        paddingTop: 15,
-        paddingBottom: 40,
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
+        height: "auto",
+        borderTopLeftRadius: 40,
+        borderTopRightRadius: 40,
+        padding: 25,
+        zIndex: 1000,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
         shadowRadius: 10,
-        elevation: 5,
+        elevation: 20,
     },
     sheetHeader: {
         flexDirection: 'row',
@@ -224,14 +228,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 15,
     },
-    menuDivider: { 
-        height: 1, 
-        backgroundColor: '#E0E0E0', 
-        marginHorizontal: 15 
+    menuDivider: {
+        height: StyleSheet.hairlineWidth,
+        marginHorizontal: 15,
     },
     filterButton: {
-        paddingVertical: 15,
-        borderRadius: 12,
+        paddingVertical: 14,
+        borderRadius: 25,
         alignItems: 'center',
     },
 })
