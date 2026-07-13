@@ -126,35 +126,43 @@ const BoxDetail = () => {
                     <TouchableOpacity
                         activeOpacity={0.7}
                         onPress={async () => {
-                            const newStatus = !boxData.status;
+                            const isCompleted = boxData.status === true || boxData.status === 'true';
+                            const newStatus = !isCompleted;
                             const result = await updateBox(boxData.id, { status: newStatus });
                             if (!result.success) {
-                                alert("Tamamlanma durumu güncellenirken bir hata oluştu.");
+                                alert("An error occurred while updating the completion status.");
                             }
                         }}
                     >
                         <ThemedCard style={[styles.noteCard, { paddingVertical: 12, paddingHorizontal: 15, flexDirection: "row", alignItems: "center", justifyContent: "flex-start", borderRadius: 10 }]}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                <View style={{
-                                    backgroundColor: boxData.status ? theme.primary : 'transparent',
-                                    borderRadius: 12,
-                                    width: 24,
-                                    height: 24,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    borderWidth: 2,
-                                    borderColor: boxData.status ? theme.primary : theme.border
-                                }}>
-                                    {boxData.status && <Ionicons name="checkmark" size={16} color="white" />}
-                                </View>
-                                <ThemedText style={{ 
-                                    fontSize: 15, 
-                                    fontWeight: boxData.status ? 'bold' : 'normal',
-                                    textDecorationLine: boxData.status ? 'line-through' : 'none',
-                                    color: boxData.status ? theme.primary : theme.text 
-                                }}>
-                                    {boxData.status ? "Completed" : "Mark as completed"}
-                                </ThemedText>
+                                {(() => {
+                                    const isCompleted = boxData.status === true || boxData.status === 'true';
+                                    return (
+                                        <>
+                                            <View style={{
+                                                backgroundColor: isCompleted ? theme.primary : 'transparent',
+                                                borderRadius: 12,
+                                                width: 24,
+                                                height: 24,
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                borderWidth: 2,
+                                                borderColor: isCompleted ? theme.primary : theme.border
+                                            }}>
+                                                {isCompleted && <Ionicons name="checkmark" size={16} color="white" />}
+                                            </View>
+                                            <ThemedText style={{ 
+                                                fontSize: 15, 
+                                                fontWeight: isCompleted ? 'bold' : 'normal',
+                                                textDecorationLine: isCompleted ? 'line-through' : 'none',
+                                                color: isCompleted ? theme.primary : theme.text 
+                                            }}>
+                                                {isCompleted ? "Completed" : "Mark as completed"}
+                                            </ThemedText>
+                                        </>
+                                    );
+                                })()}
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>

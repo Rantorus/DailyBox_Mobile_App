@@ -159,13 +159,13 @@ const ChapterDetail = () => {
                                 <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
                                     <ThemedText style={{ color: 'gray' }}>{item.category.toUpperCase()}</ThemedText>
                                     {item.category === "plan" && (
-                                        <ThemedText style={{ 
-                                            color: item.status ? theme.primary : 'gray', 
-                                            marginLeft: 8, 
+                                        <ThemedText style={{
+                                            color: (item.status === true || item.status === 'true') ? theme.primary : 'gray',
+                                            marginLeft: 8,
                                             fontSize: 12,
-                                            fontWeight: item.status ? 'bold' : 'normal'
+                                            fontWeight: (item.status === true || item.status === 'true') ? 'bold' : 'normal'
                                         }}>
-                                            {item.status ? "• ✅ Completed" : "• ⏳ Pending"}
+                                            {(item.status === true || item.status === 'true') ? "• ✅ Completed" : "• ⏳ Pending"}
                                         </ThemedText>
                                     )}
                                 </View>

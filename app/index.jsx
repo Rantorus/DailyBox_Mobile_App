@@ -148,7 +148,7 @@ const index = () => {
                         autoCapitalize="none"
                     />
 
-                    <View style={{ width: "80%", marginBottom: 20, position: 'relative', justifyContent: 'center' }}>
+                    <View style={{ width: "80%", marginBottom: 10, position: 'relative', justifyContent: 'center' }}>
                         <ThemedInput
                             style={{ width: "100%", paddingRight: 50 }}
                             placeholder="Password"
@@ -167,6 +167,12 @@ const index = () => {
                                 size={24} 
                                 color={theme.textLight} 
                             />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={{ width: "80%", alignItems: 'flex-end', marginBottom: 20 }}>
+                        <TouchableOpacity onPress={() => router.push('/(auth)/ForgotPassword')}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 14 }}>Forgot Password?</ThemedText>
                         </TouchableOpacity>
                     </View>
 

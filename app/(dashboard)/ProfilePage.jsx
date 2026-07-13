@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, ScrollView, Image, Modal, Alert, Dimensions, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -514,16 +513,13 @@ export default function ProfilePage() {
             }
           }} 
         />
-        <KeyboardAwareScrollView
+        <KeyboardAvoidingView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
-          enableOnAndroid={true}
-          extraScrollHeight={Platform.OS === 'ios' ? 40 : 40}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ThemedView style={[styles.bottomSheet, { position: 'relative', bottom: 0, width: '100%' }]}>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <ThemedView style={[styles.bottomSheet, { position: 'relative', bottom: 0, width: '100%' }]}>
               <View style={styles.sheetHeader}>
                 <ThemedText title={true} style={{ fontSize: 20 }}>Change Password</ThemedText>
                 <TouchableOpacity onPress={() => {
@@ -542,6 +538,7 @@ export default function ProfilePage() {
               <View style={{ gap: 15 }}>
                 <ThemedInput
                   placeholder="Old Password"
+                  placeholderTextColor={theme.textLight}
                   secureTextEntry
                   value={oldPassword}
                   onChangeText={setOldPassword}
@@ -550,6 +547,7 @@ export default function ProfilePage() {
                 />
                 <ThemedInput
                   placeholder="New Password"
+                  placeholderTextColor={theme.textLight}
                   secureTextEntry
                   value={newPassword}
                   onChangeText={setNewPassword}
@@ -558,6 +556,7 @@ export default function ProfilePage() {
                 />
                 <ThemedInput
                   placeholder="Confirm New Password"
+                  placeholderTextColor={theme.textLight}
                   secureTextEntry
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -576,10 +575,11 @@ export default function ProfilePage() {
                 ) : (
                   <ThemedText style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>SUBMIT</ThemedText>
                 )}
-              </TouchableOpacity>
-            </ThemedView>
+                </TouchableOpacity>
+              </ThemedView>
+            </View>
           </TouchableWithoutFeedback>
-        </KeyboardAwareScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
 

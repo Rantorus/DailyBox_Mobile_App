@@ -188,5 +188,47 @@ export const useUserStore = create((set, get) => ({
             const errorMsg = error.response?.data?.message || 'Password could not be changed.';
             return { success: false, error: errorMsg };
         }
+    },
+
+    // Şifremi Unuttum - Kod Gönder
+    requestPasswordReset: async (email) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.post('/users/forgot-password', { email });
+            set({ isLoading: false });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            set({ isLoading: false });
+            const errorMsg = error.response?.data?.message || 'Password reset code could not be sent.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // Şifre Sıfırlama - OTP Doğrulaması (Sadece Kod)
+    verifyOtp: async (email, otpCode) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.post('/users/verify-otp', { email, otpCode });
+            set({ isLoading: false });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            set({ isLoading: false });
+            const errorMsg = error.response?.data?.message || 'Invalid OTP code.';
+            return { success: false, error: errorMsg };
+        }
+    },
+
+    // Şifre Sıfırlama - Yeni Şifre Kaydet
+    verifyAndResetPassword: async (email, otpCode, newPassword) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.post('/users/reset-password', { email, otpCode, newPassword });
+            set({ isLoading: false });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            set({ isLoading: false });
+            const errorMsg = error.response?.data?.message || 'Password could not be reset.';
+            return { success: false, error: errorMsg };
+        }
     }
 }));

@@ -61,6 +61,7 @@ const InnerLayout = () => {
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="register" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
 
                 {/* ✅ TÜM MODÜLLER KENDİ KLASÖRLERİNE (LAYOUTLARINA) YÖNLENDİRİLDİ */}
                 <Stack.Screen name="box" options={{ headerShown: false }} />
