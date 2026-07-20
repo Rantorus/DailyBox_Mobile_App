@@ -1,5 +1,5 @@
-import { FlatList, Pressable, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import React from 'react';
+import { FlatList, Pressable, StyleSheet, TouchableOpacity, View, ActivityIndicator, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useMemo } from 'react';
 import { useLocalSearchParams, Stack, useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
@@ -26,8 +26,61 @@ const ChapterDetail = () => {
     const chapters = useChapterStore((state) => state.chapters);
     const chapterData = chapters.find((data) => data.id === id);
 
-    const [includedBoxes, setIncludedBoxes] = React.useState([]);
-    const [loadingBoxes, setLoadingBoxes] = React.useState(true);
+    const [includedBoxes, setIncludedBoxes] = useState([]);
+    const [loadingBoxes, setLoadingBoxes] = useState(true);
+
+    const [isFilterVisible, setIsFilterVisible] = useState(false);
+    const [sortBy, setSortBy] = useState("new");
+    const [tempSortBy, setTempSortBy] = useState("new");
+    const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+    const [tempShowFavoritesOnly, setTempShowFavoritesOnly] = useState(false);
+    const [selectedTypes, setSelectedTypes] = useState([]);
+    const [tempSelectedTypes, setTempSelectedTypes] = useState([]);
+
+    const availableTypes = useMemo(() => {
+        const allTypes = includedBoxes.map(box => box.type);
+        return [...new Set(allTypes)].filter(Boolean);
+    }, [includedBoxes]);
+
+    const toggleTempType = (type) => {
+        if (tempSelectedTypes.includes(type)) {
+            setTempSelectedTypes(tempSelectedTypes.filter(t => t !== type));
+        } else {
+            setTempSelectedTypes([...tempSelectedTypes, type]);
+        }
+    };
+
+    const filteredData = useMemo(() => {
+        return includedBoxes
+            .filter((data) => {
+                const favoriteMatch = showFavoritesOnly
+                    ? data.is_favorite === true || data.isFavorite === true
+                    : true;
+                const typeMatch = selectedTypes.length > 0
+                    ? selectedTypes.includes(data.type)
+                    : true;
+                return favoriteMatch && typeMatch;
+            })
+            .sort((a, b) => {
+                switch (sortBy) {
+                    case "new": return new Date(b.date) - new Date(a.date);
+                    case "old": return new Date(a.date) - new Date(b.date);
+                    case "az": return (a.title || "").localeCompare(b.title || "");
+                    case "za": return (b.title || "").localeCompare(a.title || "");
+                    default: return 0;
+                }
+            });
+    }, [sortBy, showFavoritesOnly, selectedTypes, includedBoxes]);
+
+    const previewCount = includedBoxes.filter((item) => {
+        const favoriteMatch = tempShowFavoritesOnly
+            ? item.is_favorite === true || item.isFavorite === true
+            : true;
+        const typeMatch = tempSelectedTypes.length > 0
+            ? tempSelectedTypes.includes(item.type)
+            : true;
+        return favoriteMatch && typeMatch;
+    }).length;
 
     useFocusEffect(
         React.useCallback(() => {
@@ -59,8 +112,11 @@ const ChapterDetail = () => {
     }
 
     return (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ThemedView safe={true} style={styles.container}>
             <StatusBar style={theme.statusBarStyle} />
+
+            <View style={styles.contentWrapper}>
 
             {/* Ekranın üstündeki Box detail ve edit yazısı*/}
             <Stack.Screen
@@ -124,13 +180,27 @@ const ChapterDetail = () => {
             </ThemedCard>
 
             <Spacer />
-            <ThemedText style={{ paddingHorizontal: 10 }} title={true}>Boxes</ThemedText>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10 }}>
+                <ThemedText title={true}>Boxes</ThemedText>
+                <TouchableOpacity
+                    style={styles.filterIcon}
+                    onPress={() => {
+                        Keyboard.dismiss();
+                        setTempSortBy(sortBy);
+                        setIsFilterVisible(true);
+                        setTempShowFavoritesOnly(showFavoritesOnly);
+                        setTempSelectedTypes(selectedTypes);
+                    }}
+                >
+                    <Ionicons name="filter-circle" size={28} color={theme.textLight} />
+                </TouchableOpacity>
+            </View>
 
 
             <View
                 style={[
                     styles.featuresDivider,
-                    { backgroundColor: theme.text } // Rengi temadan alıyoruz
+                    { backgroundColor: theme.text }
                 ]}
             />
 
@@ -138,7 +208,7 @@ const ChapterDetail = () => {
                 <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
-                    data={includedBoxes}
+                    data={filteredData}
                     keyExtractor={(item) => item.id}
                     style={{ marginBottom: 40 }}
                     contentContainerStyle={styles.list}
@@ -179,11 +249,114 @@ const ChapterDetail = () => {
                     }
                 />
             )}
+            </View>
 
+            {isFilterVisible && (
+                <Pressable
+                    style={styles.overlay}
+                    onPress={() => setIsFilterVisible(false)}
+                />
+            )}
 
+            {isFilterVisible && (
+                <ThemedView style={styles.bottomSheet}>
+                    <View style={{ flex: 1 }}>
+                        <View style={styles.sheetHeader}>
+                            <ThemedText title={true} style={{ fontSize: 20 }}>Filter Boxes</ThemedText>
+                            <TouchableOpacity onPress={() => setIsFilterVisible(false)}>
+                                <Ionicons name="close-circle" size={30} color={theme.textLight} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={[styles.menuDivider, { backgroundColor: theme.textLight + '50', marginHorizontal: 0, marginBottom: 20 }]} />
+
+                        <ThemedText title={true}>SORT BY</ThemedText>
+                        <Spacer height={10} />
+
+                        <ThemedCard style={styles.sortBar}>
+                            <TouchableOpacity onPress={() => setTempSortBy("new")}>
+                                <ThemedText title={tempSortBy == "new"}>Newest</ThemedText>
+                            </TouchableOpacity>
+                            <View style={[styles.verticalDivider, { backgroundColor: theme.textLight + '80' }]} />
+                            <TouchableOpacity onPress={() => setTempSortBy("old")}>
+                                <ThemedText title={tempSortBy == "old"}>Oldest</ThemedText>
+                            </TouchableOpacity>
+                            <View style={[styles.verticalDivider, { backgroundColor: theme.textLight + '80' }]} />
+                            <TouchableOpacity onPress={() => setTempSortBy("az")}>
+                                <ThemedText title={tempSortBy == "az"}>A-Z</ThemedText>
+                            </TouchableOpacity>
+                            <View style={[styles.verticalDivider, { backgroundColor: theme.textLight + '80' }]} />
+                            <TouchableOpacity onPress={() => setTempSortBy("za")}>
+                                <ThemedText title={tempSortBy == "za"}>Z-A</ThemedText>
+                            </TouchableOpacity>
+                        </ThemedCard>
+
+                        <Spacer height={25} />
+                        <ThemedText title={true}>TYPES</ThemedText>
+                        <Spacer height={10} />
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, paddingLeft: 5 }}>
+                            {availableTypes.map((type, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '45%' }}
+                                    onPress={() => toggleTempType(type)}
+                                >
+                                    <Ionicons
+                                        name={tempSelectedTypes.includes(type) ? "checkbox" : "square-outline"}
+                                        size={24}
+                                        color={theme.primary}
+                                    />
+                                    <ThemedText title={true} style={{ fontSize: 16 }}>{type}</ThemedText>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Spacer height={25} />
+                        <ThemedText title={true}>STATUS</ThemedText>
+                        <Spacer height={10} />
+
+                        <TouchableOpacity
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 5 }}
+                            onPress={() => setTempShowFavoritesOnly(!tempShowFavoritesOnly)}
+                        >
+                            <Ionicons
+                                name={tempShowFavoritesOnly ? "checkbox" : "square-outline"}
+                                size={24}
+                                color={theme.primary}
+                            />
+                            <ThemedText title={true} style={{ fontSize: 16 }}>Favorites Only</ThemedText>
+                        </TouchableOpacity>
+
+                        <View style={styles.filterActionRow}>
+                            <TouchableOpacity onPress={() => {
+                                setIsFilterVisible(false)
+                                setSortBy(tempSortBy);
+                                setShowFavoritesOnly(tempShowFavoritesOnly);
+                                setSelectedTypes(tempSelectedTypes);
+                            }}
+                                style={[styles.filterButton, { backgroundColor: theme.primary }]}>
+                                <ThemedText style={{ color: 'white', fontWeight: 'bold' }}>SHOW RESULTS ({previewCount})</ThemedText>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.clearButton}
+                                onPress={() => {
+                                    setTempSortBy('new');
+                                    setTempShowFavoritesOnly(false);
+                                    setTempSelectedTypes([]);
+                                }}
+                            >
+                                <ThemedText style={{ color: theme.text }}>Clear</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </ThemedView>
+            )}
 
 
         </ThemedView>
+        </TouchableWithoutFeedback>
     );
 };
 
@@ -191,6 +364,9 @@ export default ChapterDetail;
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+    },
+    contentWrapper: {
         flex: 1,
         padding: 15,
     },
@@ -264,5 +440,71 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        zIndex: 998,
+    },
+    bottomSheet: {
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
+        height: "auto",
+        borderTopLeftRadius: 40,
+        borderTopRightRadius: 40,
+        padding: 25,
+        zIndex: 1000,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 20,
+    },
+    sheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    menuDivider: {
+        height: StyleSheet.hairlineWidth,
+        marginHorizontal: 15,
+    },
+    sortBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: "center",
+        width: 300,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        gap: 20,
+        borderRadius: 15,
+        alignSelf: "center",
+    },
+    filterActionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: 15,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderColor: 'gray',
+        marginTop: 10,
+    },
+    filterButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 25,
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    clearButton: {
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 25,
+    },
+    filterIcon: {
+        position: 'absolute',
+        right: 15,
     },
 });
