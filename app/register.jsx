@@ -1,4 +1,4 @@
-import { ActivityIndicator, Keyboard, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Platform } from 'react-native'
+import { ActivityIndicator, Keyboard, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Platform, Alert } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import React, { useEffect, useState } from 'react'
 import ThemedView from '../components/ThemedView'
@@ -64,11 +64,22 @@ const Register = () => {
 
         if (result.success) {
             setIsLoading(false);
-            // Kayıt başarılı → Login ekranına parametrelerle dön
-            router.replace({
-                pathname: '/',
-                params: { registeredEmail: email, registeredPassword: password }
-            });
+            // Kayıt başarılı → Login ekranına yönlendirmeden önce alert göster
+            Alert.alert(
+                "Registration Successful", 
+                "Please check your email to activate your account before logging in.",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            router.replace({
+                                pathname: '/',
+                                params: { registeredEmail: email, registeredPassword: password }
+                            });
+                        }
+                    }
+                ]
+            );
         } else {
             setIsLoading(false);
             setError(result.error || 'Kayıt başarısız oldu.');

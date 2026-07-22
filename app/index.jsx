@@ -1,4 +1,4 @@
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import ThemedView from '../components/ThemedView'
 import ThemedText from '../components/ThemedText'
@@ -84,8 +84,14 @@ const index = () => {
         if (result.success) {
             router.replace("CalendarPage");
         } else {
-            setError(result.error || 'Giriş başarısız oldu.');
-            setIsLoading(false);
+            const errorMessage = result.error || 'Giriş başarısız oldu.';
+            if (errorMessage.includes("activate your account")) {
+                Alert.alert("Account Not Activated", errorMessage);
+                setIsLoading(false);
+            } else {
+                setError(errorMessage);
+                setIsLoading(false);
+            }
         }
     }
 

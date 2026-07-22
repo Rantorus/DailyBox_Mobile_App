@@ -28,7 +28,6 @@ const ResetPassword = () => {
 
     const verifyOtp = useUserStore(state => state.verifyOtp);
     const verifyAndResetPassword = useUserStore(state => state.verifyAndResetPassword);
-    const error = useUserStore(state => state.error);
 
     const handleVerifyOtp = async () => {
         setLocalError('');
@@ -99,11 +98,11 @@ const ResetPassword = () => {
                     style={{ width: "100%", marginBottom: 15, textAlign: 'center', letterSpacing: 5, fontSize: 20 }}
                 />
 
-                {(localError || error) && !isPasswordPanelVisible && (
+                {localError && !isPasswordPanelVisible ? (
                     <ThemedText style={{ color: "red", fontSize: 14, marginBottom: 15, textAlign: 'center' }}>
-                        {localError || error}
+                        {localError}
                     </ThemedText>
-                )}
+                ) : null}
 
                 <ThemedBtn
                     onPress={handleVerifyOtp}

@@ -21,7 +21,6 @@ const ForgotPassword = () => {
     const [isSending, setIsSending] = useState(false);
     
     const requestPasswordReset = useUserStore(state => state.requestPasswordReset);
-    const error = useUserStore(state => state.error);
 
     const handleRequestOtp = async () => {
         setLocalError('');
@@ -72,11 +71,11 @@ const ForgotPassword = () => {
                     style={{ width: "100%", marginBottom: 15 }}
                 />
 
-                {(localError || error) && (
+                {localError ? (
                     <ThemedText style={{ color: "red", fontSize: 14, marginBottom: 15, textAlign: 'center' }}>
-                        {localError || error}
+                        {localError}
                     </ThemedText>
-                )}
+                ) : null}
 
                 <ThemedBtn 
                     onPress={handleRequestOtp}
